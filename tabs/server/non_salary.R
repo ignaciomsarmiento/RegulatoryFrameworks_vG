@@ -306,7 +306,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         xref = "paper",
         yref = "paper",
         x = 0,
-        y = -0.26,
+        y = -0.34,
         xanchor = "left",
         yanchor = "top",
         showarrow = FALSE,
@@ -320,7 +320,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         xref = "paper",
         yref = "paper",
         x = 0,
-        y = -0.34,
+        y = -0.42,
         xanchor = "left",
         yanchor = "top",
         showarrow = FALSE,
@@ -348,7 +348,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
           xanchor = "center"
         ),
         annotations = plot_footer_annotations(),
-        margin = list(t = 60, b = 155)
+        margin = list(t = 60, b = 200)
       )
   }
 
@@ -911,7 +911,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
             orientation = "h",
             x = 0.5,
             xanchor = "center",
-            y = -0.2
+            y = -0.25
           )
         )
       }
@@ -1277,7 +1277,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
             orientation = "h",
             x = 0.5,
             xanchor = "center",
-            y = -0.2,
+            y = -0.25,
             traceorder = legend_traceorder
           )
         )
@@ -1547,7 +1547,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
             orientation = "h",
             x = 0.5,
             xanchor = "center",
-            y = -0.15
+            y = -0.25
           ),
           margin = list(
             l = 70,
@@ -2365,7 +2365,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
               orientation = "h",
               x = 0.5,
               xanchor = "center",
-              y = -0.15
+              y = -0.25
             ),
             
             margin = list(
@@ -2464,7 +2464,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
               orientation = "h",
               x = 0.5,
               xanchor = "center",
-              y = -0.15
+              y = -0.25
             ),
             
             margin = list(
@@ -2564,7 +2564,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
             orientation = "h",
             x = 0.5,
             xanchor = "center",
-            y = -0.15
+            y = -0.25
           ),
           
           margin = list(
@@ -2650,7 +2650,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
               orientation = "h",
               x = 0.5,
               xanchor = "center",
-              y = -0.15,
+              y = -0.25,
               traceorder = "normal"
             ),
             
@@ -2729,7 +2729,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
               orientation = "h",
               x = 0.5,
               xanchor = "center",
-              y = -0.15,
+              y = -0.25,
               traceorder = "normal"
             ),
             
@@ -2820,7 +2820,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
             orientation = "h",
             x = 0.5,
             xanchor = "center",
-            y = -0.15
+            y = -0.25
           ),
           
           margin = list(
@@ -3308,7 +3308,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
             orientation = "h",
             x = 0.5,
             xanchor = "center",
-            y = -0.15
+            y = -0.25
           ),
           
           margin = list(

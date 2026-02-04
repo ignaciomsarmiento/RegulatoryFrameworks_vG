@@ -309,7 +309,12 @@ shinyUI(
               tags$div(
                 class = "landing-desc-row",
                 p("Explore comprehensive data on ",
-                  tags$a(href="#", "non-salary labor costs", class="link-blue"),
+                  tags$a(
+                    href = "#",
+                    class = "link-blue",
+                    onclick = "Shiny.setInputValue('topic_selected', 'labor', {priority: 'event'}); return false;",
+                    "non-salary labor costs"
+                  ),
                   " across Latin American countries. Dive into interactive visualizations and detailed analyses to understand regional regulatory frameworks."
                 )
               ),
