@@ -1,0 +1,1271 @@
+/* ==========================================
+   WORLD BANK GROUP - REGULATORY FRAMEWORKS EXPLORER
+   Colores y estilos oficiales
+   ========================================== */
+
+   @import url('https://fonts.googleapis.com/css2?family=National+Park&display=swap');
+
+/* Variables de color */
+:root {
+  --page-max: 1400px;
+  --page-pad: 40px;
+  --header-height: 70px;
+  --light-gray: #F1F3F5;
+  --border-gray: #B9BAB5;
+  --solid-blue: #002244;
+  --solid-blue-60: rgba(0, 34, 68, 0.6);
+  --bright-blue: #00C1FF;
+  --white: #FEFFFF;
+  --text-dark: #1a1a1a;
+  --fs-page-title: 54px;
+  --fs-page-subtitle: 14px;
+  --fs-page-desc: 24px;
+  --fs-section-divider: 14px;
+  --fs-topic-title: 32px;
+  --fs-topic-desc: 18px;
+  --fs-nav-card-title: 20px;
+  --fs-nav-card-desc: 14px;
+  --fs-page-hamburger: 14px;
+  --fs-explore-card-title: 32px;
+  --fs-explore-card-desc: 18px;
+  --topic-card-band-height: 75px;
+  --topic-card-content-height: 250px;
+}
+
+
+html {
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--light-gray); 
+  color: var(--text-dark);
+  margin: 0;
+  padding: 0;
+  padding-top: 0;
+  line-height: 1.6;
+}
+
+/* ==========================================
+   BASE STYLES
+   ========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--light-gray); 
+  color: var(--text-dark);
+  margin: 0;
+  padding: 0;
+  padding-top: 0;
+  line-height: 1.6;
+}
+
+
+/* ==========================================
+   HEADER & NAVIGATION
+   ========================================== */
+
+.header {
+  position: static;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  background: var(--light-gray);              
+  z-index: 2000;
+  padding: 10px var(--page-pad);
+  box-shadow: none;
+  height: var(--header-height);
+  border-bottom: none;
+}
+
+.header-content {
+  display: grid;                         
+  grid-template-columns: 200px 1fr 200px;  
+  align-items: center;
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  height: 100%;
+}
+
+.wb-logo {
+  height: 30px;
+  width: auto;
+  mix-blend-mode: multiply;
+  justify-self: start;                  
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: center;                  
+  background: var(--light-gray);
+  border-radius: 50px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+
+.nav-menu-center{
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 32px;
+  width: fit-content;
+  margin: 0 auto 40px;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.nav-link {
+  color: var(--solid-blue);
+  font-family: 'National Park', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+  padding: 12px 28px;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.nav-link:hover {
+  background: var(--light-gray);
+  color: var(--bright-blue);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 193, 255, 0.12);
+}
+
+.nav-link.active {
+  background: var(--bright-blue);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(0, 193, 255, 0.3);
+}
+
+.nav-card {
+  color: var(--solid-blue);
+  font-family: 'National Park';
+  text-decoration: none;
+  padding: 20px 26px;
+  border-radius: 16px;
+  background: var(--white);
+  border: 1px solid var(--border-gray);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 240px;
+  max-width: 280px;
+  min-height: 260px;
+  flex: 1 1 0;
+  text-align: center;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  white-space: normal;
+  box-shadow: 0 8px 20px rgba(0, 34, 68, 0.08);
+  text-transform: none;
+}
+
+.nav-card:hover {
+  background: #f5fbff;
+  color: var(--solid-blue);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 193, 255, 0.16);
+  border-color: var(--bright-blue);
+}
+
+.nav-card.active {
+  border-color: var(--bright-blue);
+  box-shadow: 0 12px 24px rgba(0, 193, 255, 0.18);
+}
+
+.nav-link-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.nav-link-desc {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--solid-blue-60);
+  line-height: 1.5;
+}
+
+.nav-link-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background-color: var(--solid-blue-60);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.nav-link-cta {
+  margin-top: auto;
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--solid-blue);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  box-shadow: 0 6px 12px rgba(0, 34, 68, 0.2);
+}
+
+.nav-link:hover .nav-link-cta {
+  background: var(--bright-blue);
+  box-shadow: 0 8px 16px rgba(0, 193, 255, 0.3);
+}
+
+
+   /* =========================
+   HAMBURGER MENU
+   ========================= */
+
+.hamburger-menu {
+  position: relative;
+  justify-self: end;
+}
+
+.hamburger-btn {
+  font-size: 26px;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 6px;
+  user-select: none;
+}
+
+.hamburger-btn:hover {
+  background: var(--light-gray);
+}
+
+.hamburger-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  min-width: 240px;
+  z-index: 3000;
+  padding: 10px 0;
+}
+
+.hamburger-dropdown a {
+  display: block;
+  font-size: var(--fs-page-hamburger);
+  line-height: 1.2;
+  padding: 12px 20px;
+  text-decoration: none;
+  color: var(--solid-blue);
+  font-weight: 600;
+}
+
+.hamburger-dropdown a:hover {
+  background: var(--light-gray);
+  color: var(--bright-blue);
+}
+
+.hamburger-dropdown hr {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid var(--border-gray);
+}
+
+
+/* ==========================================
+   HERO BANNER
+   ========================================== */
+.hero-banner {
+  width: 100%;
+  height: 150px;
+  background: linear-gradient(135deg, 
+    var(--solid-blue) 0%, 
+    var(--solid-blue-60) 50%, 
+    rgba(0, 193, 255, 0.3) 100%);
+  border-radius: 12px;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner::after {
+  content: none;
+}
+
+/* ==========================================
+   MAIN CONTENT CONTAINER
+   ========================================== */
+.main-content {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 40px 0;
+}
+
+.landing-container {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0;
+}
+
+.page-section {
+  min-height: calc(100vh - 200px);
+  padding: 40px 0;
+}
+
+.page-section .container {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ==========================================
+ LANDING
+   ========================================== */
+
+/* 1. EL LIENZO PRINCIPAL (Divide la pantalla en 2 mitades) */
+.landing-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center; /* Centrado vertical */
+  justify-content: center; /* Centrado horizontal */
+  gap: 80px; /* Espacio gigante entre foto y texto */
+  
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 40px;
+  min-height: 80vh; /* Asegura que ocupe buena parte de la pantalla */
+}
+
+/* --- COLUMNA IZQUIERDA (FOTO) --- */
+.landing-left-col {
+  flex: 0 0 450px; /* Ancho FIJO de la columna de imagen */
+}
+
+.landing-image-box {
+  width: 100%;
+  height: 850px;
+  background-image: url('landing2.jpeg');
+  background-size: cover;
+  background-position: center;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+/* --- COLUMNA DERECHA (TEXTO) --- */
+.landing-right-col {
+  flex: 1;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 100px; /* Espacio vertical entre secciones */
+}
+
+/* A. HEADER (Welcome | Título) */
+.landing-header-row {
+  display: grid;
+  grid-template-columns: 140px 1fr; /* 140px para Welcome, el resto para Título */
+  gap: 100px; /* Espacio entre Welcome y Título */
+  align-items: start;
+}
+
+.landing-eyebrow {
+  text-align: right;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--solid-blue);
+  padding-top: 12px; /* Alineación óptica con la mayúscula del título */
+}
+
+.landing-title h1 {
+  margin: 0;
+  font-size: 54px; /* Título gigante */
+  line-height: 1;
+  color: var(--solid-blue);
+  font-family: 'National Park', sans-serif;
+  width: min-content;
+}
+
+/* B. DESCRIPCIÓN */
+.landing-desc-row {
+  /* Margen izquierdo = Ancho de Welcome (140) + Gap (20) = 160px */
+  margin-left: 0px; 
+}
+
+.landing-desc-row p {
+  font-size: 24px;
+  line-height: 1.5;
+  color: var(--solid-blue-60);
+  margin: 0;
+}
+
+.link-blue {
+  color: var(--bright-blue);
+  text-decoration: underline;
+}
+
+/* C. WIDGET GRID (Aquí está la clave de lo que pediste) */
+.landing-widget-grid {
+  /* Margen izquierdo para alinear con el título */
+  margin-left: 0px;
+  
+  display: grid;
+  /* Definimos las columnas: Col1 (Icono) | Col2 (Tarjeta 400px) */
+  grid-template-columns: 80px 400px;
+  
+  /* Definimos las filas: Fila1 (Tarjeta) | Fila2 (Botón) */
+  grid-template-rows: 262px auto; 
+  
+  /* MAPA DE ÁREAS: Dónde va cada cosa */
+  grid-template-areas:
+    "icon card"
+    ".    btn"; /* El punto significa espacio vacío debajo del icono */
+  
+    gap: 20px;
+
+  /* Gap del boton */
+  column-gap: 12px; 
+  row-gap: 20px;
+
+/* ---  CONFIGURACIÓN DE ANIMACIÓN --- */
+  transition: transform 0.3s ease; /* Suaviza el movimiento */
+  cursor: pointer; /* Pone la manita de click en todo el bloque */
+}
+
+/* --- EL EFECTO DE MOVIMIENTO CONJUNTO --- */
+.landing-widget-grid:hover {
+  transform: translateY(-5px); /* Mueve TODO el bloque 5px hacia arriba */
+}
+
+/* Asignamos cada elemento a su área del mapa */
+.widget-icon {
+  grid-area: icon;
+  
+  width: 90px; 
+  height: 90px;
+  background-color: var(--solid-blue);
+  border-radius: 12px;
+  display: flex; justify-content: center; align-items: center;
+}
+
+.widget-card {
+  grid-area: card;
+  
+  /* Forzamos el tamaño exacto por si acaso */
+  width: 400px;
+  height: 262px;
+  
+  background: var(--white);
+  border: 1px solid #E6EDF3;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  text-decoration: none !important;
+  display: flex; flex-direction: column; justify-content: flex-start;
+  transition: transform 0.2s;
+}
+
+.widget-card:hover {
+  transform: none !important;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.widget-card h3 {
+  color: var(--solid-blue);
+  font-size: 32px;
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.widget-card p {
+  color: var(--solid-blue-60);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.widget-btn {
+  grid-area: btn;
+  
+  /* Se alinea a la izquierda de su celda (que está debajo de la tarjeta) */
+  justify-self: start; 
+  
+  background-color: var(--solid-blue);
+  color: white !important;
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none !important;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* --- RESPONSIVE (CELULAR) --- */
+@media (max-width: 1100px) {
+  .landing-container {
+    flex-direction: column;
+    padding: 40px 20px;
+    gap: 40px;
+  }
+  
+  .landing-left-col { flex: auto; width: 100%; max-width: 500px; }
+  .landing-image-box { height: 400px; }
+  
+  .landing-header-row { display: flex; flex-direction: column; gap: 10px; }
+  .landing-eyebrow { text-align: left; padding-top: 0; }
+  
+  .landing-desc-row, .landing-widget-grid { margin-left: 0; }
+  
+  /* En móvil rompemos el grid fijo para que quepa */
+  .landing-widget-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas: 
+      "icon"
+      "card"
+      "btn";
+    width: 100%;
+  }
+  .widget-card { width: 100%; height: auto; min-height: 200px; }
+}
+
+.widget-card h3 {
+  color: var(--solid-blue);
+  /* CAMBIO AQUI: Tamaño 32px */
+  font-size: 32px; 
+  margin-top: 0;
+  margin-bottom: 15px;
+  /* Opcional: Ajustar el interlineado para que no se vea muy separado */
+  line-height: 1.2; 
+}
+
+.widget-card p {
+  color: var(--solid-blue-60);
+  /* CAMBIO AQUI: Tamaño 18px */
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+
+/* ==========================================
+   PAGE TITLES
+   ========================================== */
+.page-title {
+  font-family: 'National Park', sans-serif;
+  font-size: var( --fs-page-title);
+  font-weight: 700;
+  color: var(--solid-blue);
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.page-subtitle {
+  font-family: 'National Park', sans-serif;
+  font-size: var( --fs-page-subtitle);
+  color: var(--solid-blue-60);
+  line-height: 1.8;
+  max-width: 800px;
+  margin-bottom: 60px;
+}
+
+.section-divider {
+  font-family: 'National Park', sans-serif;
+  font-size: var(--fs-section-divider);
+  font-weight: 600;
+  color: var(--solid-blue);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  text-align: center;
+  margin: 60px 0 30px 0;
+  padding-bottom: 0;
+}
+
+/* ==========================================
+   TOPIC CARDS (Landing Page)
+   ========================================== */
+.topic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  margin-top: 40px;
+
+  /* clave para que todas puedan estirarse */
+  align-items: stretch;
+}
+
+@media (max-width: 768px) {
+  .topic-grid { grid-template-columns: 1fr; }
+}
+
+/* si tus cards son <a>, esto ayuda a que no se queden “encogidas” */
+.topic-card {
+  display: flex;
+  flex-direction: column;
+
+  height: calc(var(--topic-card-band-height) + var(--topic-card-content-height));
+
+  background: var(--white);
+  border: 1px solid var(--border-gray);
+  border-radius: 14px;
+  cursor: pointer;
+
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(0, 34, 68, 0.08);
+}
+
+.topic-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 34, 68, 0.18);
+  border-color: var(--bright-blue);
+}
+
+.topic-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.topic-card.disabled:hover {
+  transform: none;
+  box-shadow: 0 8px 18px rgba(0, 34, 68, 0.08);
+  border-color: var(--border-gray);
+}
+
+/* ↓↓↓ mitad de alto de la franja */
+.topic-card-image {
+  width: 100%;
+  height: var(--topic-card-band-height);
+
+  position: relative;
+  overflow: hidden;
+
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
+/* sin olas */
+.topic-card-image::after {
+  content: none;
+}
+
+/* =========================
+   TOPIC BACKGROUNDS
+   - Gradiente de izquierda a derecha
+   - “Color más rápido”: stops comprimidos
+   ========================= */
+
+/* -------- LABOR -------- */
+.topic-card-image.labor-img {
+  background-color: #024;
+  /*background-image: linear-gradient(
+    to right,
+    #AFB2B8 0%,
+    #726AA8 40%,
+    #335B8E 65%,
+    #024 100%
+  );
+  */
+}
+
+/* -------- MIN WAGES (base #A71261) -------- */
+.topic-card-image.minwage-img {
+  background-color: #A71261;
+  /*background-image: linear-gradient(
+    to right,
+    #E9B7D3 0%,
+    #C03A82 50%,
+    #A71261 100%
+  );
+  */
+}
+
+/* -------- BUSINESS TAXES (base #9D906C) -------- */
+.topic-card-image.btax-img {
+  background-color: #9D906C;
+ /*background-image: linear-gradient(
+    to right,
+    #E6E0CF 0%,
+    #B5AA8A 50%,
+    #9D906C 100%
+  );
+  */
+}
+
+/* Body largo + texto centrado */
+.topic-card-body {
+  padding: 22px 22px 26px;
+
+  flex: 0 0 auto;
+  height: var(--topic-card-content-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+
+  text-align: center;
+}
+
+.topic-card-title {
+  font-family: 'National Park', sans-serif;
+  font-size: var(--fs-topic-title);
+  font-weight: 700;
+  color: var(--solid-blue);
+  margin-bottom: 12px;
+}
+
+.topic-card-description {
+  font-family: 'National Park', sans-serif;
+  font-size: var(--fs-topic-desc);
+  color: var(--solid-blue-60);
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.topic-card-badge {
+  display: inline-block;
+  background: var(--light-gray);
+  color: var(--solid-blue);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 auto;
+}
+
+/* ==========================================
+   GUIDE PAGE - QUESTIONS LIST
+   ========================================== */
+.questions-list {
+  max-width: 900px;
+  margin: 40px 0;
+}
+
+.question-item {
+  background: var(--white);
+  border: 1px solid var(--border-gray);
+  border-left: 4px solid var(--bright-blue);
+  padding: 20px 30px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.question-item:hover {
+  background: var(--light-gray);
+  transform: translateX(5px);
+}
+
+.question-text {
+  font-family: 'National Park', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--solid-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================
+   ABOUT PAGE - INFO SECTIONS
+   ========================================== */
+.info-sections {
+  max-width: 900px;
+}
+
+.info-section {
+  background: var(--white);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  padding: 30px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.info-section:hover {
+  box-shadow: 0 4px 12px rgba(0, 34, 68, 0.1);
+}
+
+.info-section-title {
+  font-family: 'National Park', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--solid-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--bright-blue);
+}
+
+.info-section-content {
+  font-family: 'National Park', sans-serif;
+  font-size: 1rem;
+  color: var(--solid-blue-60);
+  line-height: 1.8;
+}
+
+/* ==========================================
+   COUNTRY SELECTION PAGE
+   ========================================== */
+.countries-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 40px;
+}
+
+.country-card {
+  background: var(--white);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.country-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 34, 68, 0.15);
+  border-color: var(--bright-blue);
+}
+
+.country-name {
+  font-family: 'National Park', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--solid-blue);
+}
+
+/* ==========================================
+   BUTTONS
+   ========================================== */
+.btn {
+  font-family: 'National Park', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 32px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: var(--bright-blue);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  background: var(--solid-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 193, 255, 0.3);
+}
+
+.btn-secondary {
+  background: var(--white);
+  color: var(--solid-blue);
+  border: 2px solid var(--solid-blue);
+}
+
+.btn-secondary:hover {
+  background: var(--solid-blue);
+  color: var(--white);
+}
+
+.btn-back {
+  background: transparent;
+  color: var(--solid-blue);
+  padding: 10px 20px;
+  margin-bottom: 30px;
+  border: 1px solid var(--border-gray);
+}
+
+.btn-back:hover {
+  background: var(--light-gray);
+}
+
+/* ==========================================
+   FOOTER
+   ========================================== */
+
+.footer {
+  background: var(--light-gray);
+  padding: 14px 40px;
+  text-align: left;
+  border-top: none;
+  margin-top: 80px;
+  box-shadow: none;
+  clip-path: none;
+}
+
+.footer-text {
+  font-family: 'National Park', sans-serif;
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.footer p {
+  color: var(--text-dark);
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+   ========================================== */
+@media (max-width: 768px) {
+  .header {
+    padding: 10px 20px;
+    height: auto;
+  }
+
+  .header-content {
+    grid-template-columns: auto 1fr auto;
+    column-gap: 12px;
+  }
+
+  .wb-logo {
+    height: 26px;
+  }
+  
+  .nav-menu {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .hamburger-dropdown {
+    width: min(240px, 90vw);
+    max-width: calc(100vw - 24px);
+  }
+  
+  .page-title {
+    font-size: 2rem;
+  }
+  
+  .topics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .countries-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  .main-content {
+    padding: 20px;
+  }
+}
+
+/* ==========================================
+   UTILITY CLASSES
+   ========================================== */
+.text-center {
+  text-align: center;
+}
+
+.mt-40 {
+  margin-top: 40px;
+}
+
+.mb-40 {
+  margin-bottom: 40px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.router-hidden {
+  display: none !important;
+}
+
+
+/* ==========================================
+   EXPLORE MORE (horizontal cards like screenshot)
+   Works with your existing ui.R:
+   .landing-card-grid.small > a.landing-card
+   ========================================== */
+
+/* Asegura que la grilla no deforme */
+.landing-card-grid.small {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  align-items: stretch;
+}
+
+@media (max-width: 768px) {
+  .landing-card-grid.small {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* La card ahora es horizontal */
+.landing-card-grid.small .landing-card {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+
+  width: 100%;
+  min-height: 140px;
+
+  background: var(--white);
+  border: 1px solid rgba(0, 34, 68, 0.10);
+  border-radius: 12px;
+
+  padding: 0;
+  text-decoration: none;
+  overflow: hidden;
+
+  box-shadow: 0 8px 18px rgba(0, 34, 68, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.landing-card-grid.small .landing-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0, 34, 68, 0.14);
+  border-color: rgba(0, 34, 68, 0.18);
+}
+
+/* Imagen a la izquierda */
+.landing-card-grid.small .landing-card-image {
+  flex: 0 0 132px;
+  width: 132px;
+  height: 100%;
+
+  border-radius: 12px 0 0 12px;
+  overflow: hidden;
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Texto a la derecha */
+.landing-card-grid.small .landing-card-body {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.landing-card-grid.small .landing-card-body h3 {
+  margin: 0 0 6px 0;
+  font-size: calc(var(--fs-explore-card-title) - 1pt);
+  line-height: 1.1;
+  color: var(--solid-blue);
+}
+
+.landing-card-grid.small .landing-card-body p {
+  margin: 0;
+  font-size: calc(var(--fs-explore-card-desc) - 1pt);
+  line-height: 1.35;
+  color: var(--solid-blue-60);
+}
+
+/* ==========================================
+   EXPLORE MORE – compact buttons
+   ========================================== */
+
+/* La grilla ahora centra los botones */
+/* (removed) */
+
+/* ADICIONALES JULIAN */
+
+
+/* CONTENEDOR PRINCIPAL – siempre una fila */
+.horizontal-container {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  width:100%;
+  gap:20px;
+}
+
+
+/* ----------------------------------------------------------
+   BOTONES MUY PEQUEÑOS
+-----------------------------------------------------------*/
+.component-buttons-container {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:200px;
+}
+
+.component-wrapper-fixed {
+  margin-top: 8px;
+  margin-left: 12px;
+}
+
+.option2-group {
+  margin-left: 18px;
+}
+
+.option2-group .pill-button {
+  padding: 4px 14px !important;
+  font-size: 12px !important;
+  min-width: 0;
+  width: auto;
+  align-self: flex-start;
+}
+
+.component-btn {
+  padding: 6px 12px !important;
+  font-size: 11px !important;
+  min-height: 26px !important;
+  line-height: 1.2 !important;
+  border-radius: 12px !important;
+  white-space: nowrap !important;
+}
+
+
+/* ----------------------------------------------------------
+   SELECT MUY PEQUEÑO
+-----------------------------------------------------------*/
+.small-select {
+  min-width: 50px;
+}
+
+/* Label arriba del select */
+.small-select label {
+  font-size: 10px !important;
+  margin-bottom: 2px !important;
+  display: block !important;
+}
+
+/* Texto dentro del select */
+.small-select .selectize-control {
+  font-size: 10px !important;
+  min-height: 24px !important;
+}
+
+.small-select .selectize-input {
+  padding: 2px 4px !important;
+  min-height: 24px !important;
+  font-size: 10px !important;
+}
+
+.small-select .selectize-dropdown {
+  font-size: 10px !important;
+}
+
+
+/* ======== SELECT INPUT LINDO ========= */
+.pretty-select label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* Contenedor general */
+.pretty-select .selectize-control {
+  border-radius: 8px !important;
+  box-shadow: 0px 1px 3px rgba(0,0,0,0.12);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Input visual */
+.pretty-select .selectize-input {
+  border-radius: 8px !important;
+  border: 1px solid #ccc !important;
+  background: white !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+  height: 36px !important;
+  display: flex;
+  align-items: center;
+}
+
+.pretty-select .selectize-input:hover {
+  border-color: #00aaff !important;
+}
+
+/* Input cuando está activo */
+.pretty-select .selectize-input.focus {
+  border-color: #0099dd !important;
+  box-shadow: 0 0 0 2px rgba(0,153,221,0.2) !important;
+}
+
+/* Dropdown */
+.pretty-select .selectize-dropdown {
+  border-radius: 8px !important;
+  border: 1px solid #ddd !important;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.15) !important;
+  font-size: 13px !important;
+}
+
+/* Items dentro del dropdown */
+.pretty-select .selectize-dropdown .option {
+  padding: 8px 10px !important;
+}
+
+/* Hover sobre items */
+.pretty-select .selectize-dropdown .option:hover {
+  background-color: #f0faff !important;
+  color: #0077b6 !important;
+}
+
+/* Compact multi-wage selector */
+.mw-select .selectize-control {
+  font-size: 11px !important;
+}
+
+.mw-select .selectize-input {
+  padding: 4px 6px !important;
+  min-height: 30px !important;
+  font-size: 11px !important;
+}
+
+.mw-select .selectize-input .item {
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+}
+
+.mw-select .selectize-dropdown {
+  font-size: 11px !important;
+}

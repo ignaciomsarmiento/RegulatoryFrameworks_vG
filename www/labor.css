@@ -1,0 +1,328 @@
+/* Labor module shared styles */
+
+.pill-button.active {
+  background-color: #00C1FF !important;
+  color: white !important;
+}
+
+.pill-button:hover {
+  opacity: 0.85;
+}
+
+.pill-button {
+  font-size: 11px;
+  width: auto;
+  align-self: flex-start;
+  display: inline-flex;
+}
+
+.left-panel .pill-button {
+  width: auto;
+  align-self: flex-start;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.subcomponent-btn {
+  font-size: 9px;
+}
+
+.component-btn.active {
+  background-color: #00C1FF !important;
+  color: white !important;
+}
+
+.component-btn:hover {
+  opacity: 0.85;
+}
+
+.component-btn {
+  font-size: 9px;
+}
+
+.plot-spinner .shiny-bound-output.recalculating {
+  position: relative;
+  opacity: 0.6;
+}
+
+.plot-spinner .shiny-bound-output.recalculating:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 10;
+}
+
+.plot-spinner .shiny-bound-output.recalculating:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin-top: -16px;
+  margin-left: -16px;
+  border-radius: 50%;
+  border: 3px solid #cfd8dc;
+  border-top-color: #00C1FF;
+  animation: spinner-rotate 0.8s linear infinite;
+  z-index: 11;
+}
+
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .plot-scroll {
+    overflow-x: auto;
+  }
+
+  .plot-scroll .html-widget {
+    min-width: 900px;
+  }
+}
+
+.labor-explore-by {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.labor-explore-label {
+  color: #b0b0b0;
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 12px;
+  text-transform: uppercase;
+  padding-top: 12px;
+  min-width: 120px;
+}
+
+.labor-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.labor-choice-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  background: #ffffff !important;
+  border: 1px solid #e0e6ef !important;
+  border-radius: 14px !important;
+  padding: 12px 18px !important;
+  text-align: left !important;
+  box-shadow: 0 6px 14px rgba(15, 59, 102, 0.08);
+  color: #1e3a5f;
+}
+
+.labor-choice-row:hover {
+  border-color: #c9d7e6 !important;
+}
+
+.labor-choice-row.active {
+  border-color: #00b8d4 !important;
+  box-shadow: 0 10px 22px rgba(0, 184, 212, 0.16);
+}
+
+.labor-choice-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #c1cdda;
+  background: #ffffff;
+  flex: 0 0 auto;
+}
+
+.labor-choice-row.active .labor-choice-dot {
+  border-color: #00b8d4;
+  background: #00b8d4;
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.labor-choice-title {
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: #1e3a5f;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.labor-choice-row.active .labor-choice-title {
+  color: #00b8d4;
+}
+
+.labor-choice-desc {
+  font-size: 14px;
+  color: #6b7c93;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+.labor-view-selector + .row {
+  margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+  .labor-explore-by {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .labor-explore-label {
+    padding-top: 0;
+  }
+
+  .labor-choice-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .labor-choice-desc {
+    flex-basis: 100%;
+    margin-left: 26px;
+  }
+}
+
+.labor-tenure-toggle {
+  background: #ffffff;
+  border: 1px solid #d7e0ec;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.labor-tenure-toggle .checkbox {
+  margin: 0;
+}
+
+.labor-tenure-toggle label {
+  font-weight: 600;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.labor-tenure-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid #1e3a5f;
+  border-radius: 50%;
+  background: #ffffff;
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-items: center;
+}
+
+.labor-tenure-toggle input[type="checkbox"]:checked {
+  background: radial-gradient(circle, #1e3a5f 0 4px, #ffffff 5px);
+}
+
+
+.labor-plot-controls {
+  margin-bottom: 12px;
+}
+
+.labor-country-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.labor-country-title {
+  font-weight: 700;
+  color: #1e3a5f;
+  font-size: 14px;
+}
+
+.labor-country-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  justify-content: space-between;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.labor-country-button {
+  flex: 1 1 0;
+  min-width: 72px;
+  max-width: 110px;
+  height: 76px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid #d7e0ec;
+  background: #ffffff;
+  color: #1e3a5f;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: "National Park", sans-serif;
+  font-size: 10px;
+  text-align: center;
+  line-height: 1.2;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.labor-country-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(15, 59, 102, 0.12);
+  border-color: #00c1ff;
+}
+
+.labor-country-button.active {
+  border-color: #00c1ff;
+  box-shadow: 0 0 0 2px rgba(0, 193, 255, 0.2);
+}
+
+.labor-flag {
+  width: 26px;
+  height: 18px;
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+.labor-country-label {
+  display: block;
+}
+
+.labor-country-hover {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 59, 102, 0.92);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.labor-country-button:hover .labor-country-hover {
+  opacity: 1;
+}
