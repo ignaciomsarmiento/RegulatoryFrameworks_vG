@@ -19,7 +19,7 @@ shinyUI(
     tags$head(
       tags$title("Regulatory Frameworks Explorer"),
       tags$link(
-        href = "https://fonts.googleapis.com/css2?family=Source+Serif+Pro:wght@400;600&family=Source+Sans+Pro:wght@300;400;600&display=swap",
+        href = "https://fonts.googleapis.com/css2?family=National+Park&display=swap",
         rel = "stylesheet"
       ),
       includeCSS("www/styles.css"),
@@ -236,30 +236,11 @@ shinyUI(
               class = "nav-link",
               onclick = "document.querySelector('a[data-value=\"landing\"]').click();"
             ),
-           
-            
-            tags$hr(),
             
             tags$a(
               "Non-Salary Labor Costs",
               class = "nav-link",
               onclick = "Shiny.setInputValue('topic_selected', 'labor', {priority: 'event'})"
-            ),
-            tags$a(
-              "Minimum Wages",
-              class = "nav-link",
-              onclick = "document.querySelector('a[data-value=\"forthcoming\"]').click();"
-            ),
-            tags$a(
-              "Business Taxes",
-              class = "nav-link",
-              onclick = "document.querySelector('a[data-value=\"forthcoming\"]').click();"
-            ),
-            tags$hr(),
-            tags$a(
-              "Guide",
-              class = "nav-link",
-              onclick = "document.querySelector('a[data-value=\"Guide\"]').click();"
             ),
             tags$a(
               "About",
@@ -352,10 +333,10 @@ shinyUI(
           # Footer fuera del grid principal
           tags$div(class = "footer", tags$p("© 2026 World Bank Group"))
         ),
-        # ============================
-        # 2. Guide 
-        # ============================
-        tabPanel("Guide", guide), 
+        # # ============================
+        # # 2. Guide (is not yet needed)
+        # # ============================
+        # tabPanel("Guide", guide), 
         
         # ============================
         # 3. About
@@ -363,11 +344,11 @@ shinyUI(
         tabPanel(
           "About", about
         ),
-        # En la sección de tabsetPanel, después de "About"
-        tabPanel(
-          "forthcoming",
-          forthcoming
-        ),
+        # # En la sección de tabsetPanel, después de "About"
+        # tabPanel(
+        #   "forthcoming",
+        #   forthcoming
+        # ),
         # ============================
         # 4. CONTENT MODULE PAGE
         # ============================
