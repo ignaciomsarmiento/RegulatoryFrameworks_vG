@@ -171,6 +171,7 @@ labor_ui <- function(id) {
                      )
                    ),
                    
+                   tags$span("1. Categories:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
                    tags$p(
                      style = "font-size: 13px; line-height: 1.5; margin-bottom: 15px;",
                      "Use these filters to compare non salary labor costs across countries"
@@ -232,7 +233,7 @@ labor_ui <- function(id) {
                    # ---- WAGE FILTER ----
                    tags$div(
                      style = "display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;",
-                     tags$span("Minimum Wage filters:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
+                     tags$span("3. Minimum Wage:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
                      tags$p(
                        "Hold the job constant and change only earnings: choose a multiple of the minimum wage (MW) to see how statutory costs scale with pay.",
                        style = "font-size: 12px; color: #555; margin: 0 0 4px 0;"
@@ -243,7 +244,7 @@ labor_ui <- function(id) {
                    # ---- COUNTRY FILTER ----
                    tags$div(
                      style = "margin-top: 5px;",
-                     tags$span("Country filters:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
+                     tags$span("4. Country:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
                      tags$p(
                        "Switch countries to see how different regulatory frameworks change the composition and level of non-wage costs.",
                        style = "font-size: 12px; color: #555; margin: 0 0 6px 0;"
@@ -286,7 +287,7 @@ labor_ui <- function(id) {
                  div(
                    class = "table-spinner",
                    style = "margin-top:30px;",
-                   reactable::reactableOutput(ns("tabla_detalle"))
+                   uiOutput(ns("tabla_detalle"))
                  )
                )
              )

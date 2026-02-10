@@ -3978,7 +3978,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
   # AHORA:  data <- get_excel_table("TL All B")
   # ============================================================================
   
-  output$tabla_detalle<-reactable::renderReactable({
+  output$tabla_detalle <- renderUI({
     table_visible(FALSE)
     ns_variables$df_final_tabla <- NULL
 
@@ -3995,9 +3995,169 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     if (!"All" %in% con_sel) {
       con_sel_names <- vapply(con_sel, country_display_name, character(1))
     }
+    title_case_simple <- function(text) {
+      if (is.null(text) || length(text) == 0 || !nzchar(text)) {
+        return(text)
+      }
+      minor_words <- c("a", "an", "and", "as", "at", "but", "by", "for", "from",
+                       "if", "in", "nor", "of", "on", "or", "per", "the", "to",
+                       "vs", "via", "with")
+      original_words <- strsplit(text, "\\s+")[[1]]
+      words <- strsplit(tolower(text), "\\s+")[[1]]
+      total <- length(words)
+      for (i in seq_along(words)) {
+        orig <- original_words[i]
+        w <- words[i]
+        if (grepl("^[A-Z]{2,}$", orig)) {
+          words[i] <- orig
+        } else if (i != 1 && i != total && w %in% minor_words) {
+          words[i] <- w
+        } else {
+          words[i] <- paste0(toupper(substr(w, 1, 1)), substr(w, 2, nchar(w)))
+        }
+      }
+      paste(words, collapse = " ")
+    }
+
+    component_label <- NULL
+    if (groupC == "bonuses_and_benefits") {
+      component_label <- switch(
+        groupD,
+        all_bonuses = "All Bonuses",
+        ab = "Annual and other periodic bonuses",
+        pl = "Paid Leave",
+        up = "Unemployment Protection",
+        ob = "Other bonuses and benefits",
+        "Bonuses and benefits"
+      )
+    } else if (groupE == "health") {
+      component_label <- "Health"
+    } else if (groupE == "payroll_taxes") {
+      component_label <- "Payroll Taxes"
+    } else if (groupE == "pensions") {
+      component_label <- "Pensions"
+    }
+
+    title_text <- NULL
+    if (!is.null(component_label)) {
+      title_text <- paste0("Detailed regulatory information on ", component_label)
+      if (length(con_sel_names) == 1 && con_sel_names[1] != "All") {
+        title_text <- paste0(title_text, " in ", con_sel_names[1])
+      }
+      title_text <- title_case_simple(title_text)
+    }
+
+    title_ui <- NULL
+    if (!is.null(title_text)) {
+      title_ui <- tags$div(
+        style = paste(
+          "font-weight: 600;",
+          "margin: 8px 0 12px 0;",
+          "color: #0f3b66;",
+          "text-align: center;",
+          "font-size: 20px;",
+          "font-family:", plotly_font_family, ";"
+        ),
+        title_text
+      )
+    }
+    build_tl_ab_html <- function(country_filter = NULL) {
+      html_path <- "data/non_salary/tables_html/tl_ab_v3.html"
+      if (!file.exists(html_path)) {
+        return(NULL)
+      }
+      html_text <- paste(readLines(html_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+      extract_block <- function(pattern) {
+        match <- regexpr(pattern, html_text, perl = TRUE, ignore.case = TRUE)
+        if (match[1] == -1) {
+          return(NULL)
+        }
+        regmatches(html_text, match)
+      }
+      style_block <- extract_block("<style[^>]*>[\\s\\S]*?</style>")
+      if (!is.null(style_block)) {
+        style_block <- sub("^<style[^>]*>", "", style_block)
+        style_block <- sub("</style>$", "", style_block)
+      }
+      table_block <- extract_block("<table[^>]*>[\\s\\S]*?</table>")
+      if (is.null(table_block)) {
+        return(NULL)
+      }
+      if (!is.null(country_filter) && country_filter != "" && country_filter != "All") {
+        row_matches <- gregexpr("<tr[^>]*>[\\s\\S]*?</tr>", table_block, perl = TRUE, ignore.case = TRUE)
+        row_blocks <- regmatches(table_block, row_matches)[[1]]
+        if (length(row_blocks) > 1) {
+          header_row <- row_blocks[1]
+          data_rows <- row_blocks[-1]
+          escape_regex <- function(x) {
+            gsub("([\\\\.^$|()\\[\\]{}*+?])", "\\\\\\1", x)
+          }
+          pattern <- paste0("^", escape_regex(country_filter), "$")
+          keep <- vapply(data_rows, function(row) {
+            td_match <- regexpr("<td[^>]*>[\\s\\S]*?</td>", row, perl = TRUE, ignore.case = TRUE)
+            if (td_match[1] == -1) {
+              return(FALSE)
+            }
+            td_block <- regmatches(row, td_match)
+            cell_text <- gsub("<[^>]+>", "", td_block)
+            cell_text <- trimws(cell_text)
+            grepl(pattern, cell_text, ignore.case = TRUE)
+          }, logical(1))
+          new_rows <- paste(c(header_row, data_rows[keep]), collapse = "")
+          table_block <- sub(
+            "(?is)(<table[^>]*>)[\\s\\S]*?(</table>)",
+            paste0("\\1", new_rows, "\\2"),
+            table_block,
+            perl = TRUE
+          )
+        }
+      }
+      table_block <- sub("<table", "<table id=\"bonus_tbl\"", table_block, fixed = TRUE)
+      wrap_block <- extract_block("<div[^>]*class=[\"'][^\"']*tl-table-wrap[^\"']*[\"'][^>]*>[\\s\\S]*?</div>")
+      div_block <- wrap_block
+      if (is.null(div_block)) {
+        div_block <- extract_block("<div[^>]*id=[\"']tables_[^\"']+[\"'][^>]*>[\\s\\S]*?</div>")
+      }
+      html_block <- table_block
+      if (!is.null(div_block)) {
+        div_block <- sub("<table[^>]*>[\\s\\S]*?</table>", table_block, div_block, perl = TRUE, ignore.case = TRUE)
+        html_block <- div_block
+      }
+      init_js <- paste0(
+        "$(function(){",
+        "var $tbl = $('#bonus_tbl');",
+        "if (!$tbl.length) { return; }",
+        "if ($.fn.DataTable.isDataTable($tbl)) { $tbl.DataTable().destroy(); }",
+        "var dt = $tbl.DataTable({",
+        "paging: true,",
+        "pageLength: 10,",
+        "lengthMenu: [5, 10, 25],",
+        "searching: false,",
+        "info: true,",
+        "ordering: true,",
+        "autoWidth: false,",
+        "dom: 'tip'",
+        "});",
+        "});"
+      )
+      dt_deps <- htmltools::htmlDependencies(
+        DT::datatable(data.frame(), options = list(dom = "t"), rownames = FALSE)
+      )
+      tagList(
+        title_ui,
+        if (!is.null(style_block)) tags$style(HTML(style_block)),
+        dt_deps,
+        tags$div(
+          style = "width:100%; text-align:center;",
+          HTML(html_block)
+        ),
+        tags$script(HTML(init_js))
+      )
+    }
     if(groupA!= "component" ) return()
     else{
       data <- NULL
+      html_output <- NULL
       if(groupA== "component" & groupC=="all_component"){
         return()
       }
@@ -4022,6 +4182,11 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
           }
           ns_variables$df_final_tabla=data
         }
+        country_filter <- NULL
+        if (length(con_sel_names) == 1 && con_sel_names[1] != "All") {
+          country_filter <- con_sel_names[1]
+        }
+        html_output <- build_tl_ab_html(country_filter)
       }
       else if (groupA== "component" & groupC=="bonuses_and_benefits" & groupD=="pl"){
         # OPTIMIZADO
@@ -4090,38 +4255,48 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         }
       }
     
+    if (!is.null(html_output)) {
+      table_visible(TRUE)
+      return(html_output)
+    }
     if (is.null(data)) {
-      return()
+      return(NULL)
     }
     table_visible(TRUE)
     
-    reactable::reactable(
-      data,
-      
-      # Estilo general aplicado a todas las columnas
-      defaultColDef = reactable::colDef(
-        html = TRUE,
-        minWidth = 140,
-        maxWidth = 260,
-        align = "left",
-        style = list(
-          whiteSpace = "normal",
-          lineHeight = "1.35",
-          fontSize = "12px",
-          padding = "6px",
-          textAlign = "justify",
-          fontFamily = plotly_font_family
+    tagList(
+      title_ui,
+      tags$div(
+        style = "display:flex; justify-content:center; width:100%;",
+        reactable::reactable(
+          data,
+          
+          # Estilo general aplicado a todas las columnas
+          defaultColDef = reactable::colDef(
+            html = TRUE,
+            minWidth = 140,
+            maxWidth = 260,
+            align = "left",
+            style = list(
+              whiteSpace = "normal",
+              lineHeight = "1.35",
+              fontSize = "12px",
+              padding = "6px",
+              textAlign = "justify",
+              fontFamily = plotly_font_family
+            )
+          ),
+          theme = reactable::reactableTheme(
+            style = list(fontFamily = plotly_font_family),
+            headerStyle = list(fontFamily = plotly_font_family)
+          ),
+          bordered = TRUE,
+          striped = TRUE,
+          highlight = TRUE,
+          resizable = TRUE,
+          defaultPageSize = 8
         )
-      ),
-      theme = reactable::reactableTheme(
-        style = list(fontFamily = plotly_font_family),
-        headerStyle = list(fontFamily = plotly_font_family)
-      ),
-      bordered = TRUE,
-      striped = TRUE,
-      highlight = TRUE,
-      resizable = TRUE,
-      defaultPageSize = 8
+      )
     )
     
 } 

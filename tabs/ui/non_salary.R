@@ -72,7 +72,7 @@ labor_layout_ui <- function(ns, title, subtitle, filters_ui, plot_controls_ui = 
           ),
           div(
             style = "margin-top:30px;",
-            reactable::reactableOutput(ns("tabla_detalle"))
+            uiOutput(ns("tabla_detalle"))
           )
         )
       )
@@ -93,7 +93,7 @@ labor_choice_cards_ui <- function(ns, active_view = NULL) {
   }
   tags$div(
     class = "labor-explore-by",
-    tags$span(class = "labor-explore-label", "2. Explore by:"),
+    tags$span(class = "labor-explore-label", "EXPLORE BY"),
     tags$div(
       class = "labor-choice-list",
       actionButton(

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+
+/* ── Reset & Base ── */
+* { box-sizing: border-box; }
+
+.tl-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+}
+
+table.tl-table {
+  border-collapse: collapse;
+  font-family: 'National Park', sans-serif;
+  font-size: 12px;
+  color: #000;
+  width: 100%;
+  max-width: 960px;
+  table-layout: fixed;
+}
+
+/* ── Column widths ── */
+table.tl-table td:nth-child(1) { width: 14%; }   /* Country */
+table.tl-table td:nth-child(2) { width: 52%; }   /* Bonuses */
+table.tl-table td:nth-child(3) { width: 34%; }   /* Legislation */
+
+/* ── All cells ── */
+table.tl-table td {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  vertical-align: middle;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
+}
+
+/* ── Header row ── */
+table.tl-table tr:first-child td {
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  background: #fff !important;
+  padding: 10px 8px;
+}
+
+/* ── Country column (col 1, all rows except header) ── */
+table.tl-table tr:not(:first-child) td:first-child {
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* ── Bonuses & Legislation columns ── */
+table.tl-table tr:not(:first-child) td:nth-child(2),
+table.tl-table tr:not(:first-child) td:nth-child(3) {
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* ── Zebra striping (white / light-gray) ── */
+table.tl-table tr:nth-child(even) td {
+  background: #F1F3F5;
+}
+table.tl-table tr:nth-child(odd) td {
+  background: #fff;
+}
+
+/* ── No mandatory bonuses rows (Chile, United States) - darker gray override ── */
+table.tl-table tr.no-bonus td {
+  background: #D5D8DC !important;
+}
+
+/* ── Font classes (inline <font> tags from Excel) ── */
+.font5 { font-weight: 700; font-style: normal; font-family: inherit; font-size: inherit; }        /* bold labels */
+.font6 { font-weight: 400; font-style: italic; }         /* italic bonus names */
+.font7 { font-weight: 400; font-style: normal; }         /* normal text */
+.font8 { font-weight: 400; font-style: normal; }         /* normal text */
+.font9 { font-weight: 400; font-style: italic; }         /* italic legislation refs */
+
+</style>
+</head>
+<body>
+<div class="tl-table-wrap">
+<table border="0" cellpadding="0" cellspacing="0" class="tl-table" style="border-collapse:
+ collapse;table-layout:fixed;width:588pt">
+<tr>
+<td>Country</td>
+<td>Annual and
+  other periodic bonuses</td>
+<td>Legislation</td>
+</tr>
+<tr>
+<td>Argentina</td>
+<td>Annual
+  bonus:<font class="font7"> 1 monthly wage.</font></td>
+<td>Law
+  23041 (1983).</td>
+</tr>
+<tr>
+<td>Bolivia</td>
+<td>Christmas
+  bonus:<font class="font7"> 1 monthly wage.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font6">Employment tenure bonus "Antiguedad":</font><font class="font7"> 3 MW multiplied by a factor that varies with length of tenure:</font><font class="font7"><br/>
+    - 2-4 years: 5%.</font><font class="font7"><br/>
+    - 5-7 years: 11%.</font><font class="font7"><br/>
+    - 8-10 years: 18%.</font><font class="font7"><br/>
+    - 11-14 years: 26%.</font><font class="font7"><br/>
+    - 15-19 years: 34%.</font><font class="font7"><br/>
+    - 20-24 years: 42%.</font><font class="font7"><br/>
+    - 25 or more years: 50%.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font6">Quinquennial bonus:</font><font class="font7">
+  Employees who have been in service for at least 5 years are entitled to five
+  monthly wages paid every five years.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font6">Economic growth bonus "Doble
+  aguinaldo":</font><font class="font7"> 1 monthly wage awarded when the
+  annual June-to-June GDP growth exceeds 4.5%.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font5">Only employees working within 50km of
+  international borders:</font><font class="font7"> </font><font class="font6">Border
+  subsidy: </font><font class="font7">20% of wages.</font></td>
+<td>Law
+  of December 18th (1944) - <font class="font9">Christmas bonus.</font><font class="font9"><br/>
+</font><font class="font8">Supreme Decree 21137 (1985) - </font><font class="font9">Bono antiguedad and border subsidy.</font><font class="font9"><br/>
+</font><font class="font8">Supreme Decree 522 (2010) - </font><font class="font9">Bono quinquenio.</font><font class="font9"><br/>
+</font><font class="font8">Supreme Decree 1802 (2013) - </font><font class="font9">Doble aguinaldo.</font></td>
+</tr>
+<tr>
+<td>Brazil</td>
+<td>Annual
+  bonus:<font class="font7"> 1 wage.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font6">Vacation bonus:</font><font class="font7">
+  equivalent to 1/3 wages.</font></td>
+<td>Decree
+  Law 5.452 (1943) - <font class="font9">Vacation bonus.</font><font class="font9"><br/>
+</font><font class="font8">Law 4090 (1962) - </font><font class="font9">Annual
+  bonus.</font></td>
+</tr>
+<tr class="no-bonus no-bonus">
+<td>Chile</td>
+<td>No
+  mandatory bonuses.</td>
+<td> </td>
+</tr>
+<tr>
+<td>Colombia</td>
+<td>Workers
+  with wages under 13MW: <font class="font7">1 wage.</font></td>
+<td>Law
+  1788 (2016).</td>
+</tr>
+<tr>
+<td>Dominican Republic</td>
+<td>Christmas
+  bonus:<br/>
+<font class="font7">- Workers earning up to 5 MW: 1 wage.</font><font class="font7"><br/>
+    - Workers earning more than 5 MW: 5 MW.</font></td>
+<td>Law
+  16 (1992).</td>
+</tr>
+<tr>
+<td>Ecuador</td>
+<td>Christmas
+  bonus:<font class="font7"> 1 wage.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font6">Annual bonus "Decimocuarta
+  remuneracion":</font><font class="font7"> 1 wage.</font></td>
+<td>Labor
+  Code (2012).</td>
+</tr>
+<tr>
+<td>Honduras</td>
+<td>Annual
+  bonus "Decimo tercer mes":<font class="font8"> 1 wage</font><font class="font9">.</font></td>
+<td>Decree
+  No. 112. (1982) - <font class="font9">Ley del Séptimo Día y Décimo Tercer Mes
+  en Concepto de Aguinaldo.</font></td>
+</tr>
+<tr>
+<td>Mexico</td>
+<td>Annual
+  bonus "Aguinaldo":<font class="font7"> 0.5 wages.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font6">Vacation bonus:</font><font class="font7"> bonus
+  equivalent to 25% of the wages corresponding to their vacation period.</font></td>
+<td>Federal
+  Labor Law (1970, last reformed in 2023).</td>
+</tr>
+<tr>
+<td>Paraguay</td>
+<td>Annual bonus
+  "aguinaldo":<font class="font7"> 1 wage</font><font class="font6">.</font></td>
+<td>Law
+  No. 213 (2014).</td>
+</tr>
+<tr>
+<td>Peru</td>
+<td>Annual
+  bonus:<font class="font7"> Workers in medium and large businesses: 2 wages +
+  corresponding employer health contribution (9% or 6.75%, depending on
+  modality), annual.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font6">Family bonus:</font><font class="font7"> a
+  monthly bonus equivalent to 10% of the MW for workers who have children under
+  18 or children under 24 attending tertiary education. This bonus is per
+  worker, not per child.</font><font class="font7"><br/>
+</font><font class="font7"><br/>
+</font><font class="font6">Workers in small and micro businesses: </font><font class="font7">1 wage + corresponding employer health contribution (9% or
+  6.75%, depending on modality), annual.</font></td>
+<td>Law
+  No. 25129 (1989) - <font class="font9">Family Bonus.</font><font class="font9"><br/>
+</font><font class="font8">Law No. 27735 (2002) - </font><font class="font9">Annual
+  Bonus.</font><font class="font9"><br/>
+</font><font class="font8">Supreme Decree 013-2013-PRODUCE (2013) - </font><font class="font9">Bonus for micro and small businesses.</font></td>
+</tr>
+<tr class="no-bonus no-bonus">
+<td>United States</td>
+<td>No
+  mandatory bonuses at the Federal or State level.</td>
+<td> </td>
+</tr>
+<tr>
+<td>Spain</td>
+<td>Two
+  extra bonuses are usually paid in June and December, with the option for
+  distribution throughout the year as specified in the contract. Each bonus
+  equals one month's salary.</td>
+<td>Workers’
+  Statute (2015, last reformed in 2024).</td>
+</tr>
+
+</table>
+</div>
+</body>
+</html>
