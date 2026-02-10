@@ -8,13 +8,13 @@ labor_server <- function(input, output, session) {
   
   # COLORS
   # Total
-
+  
   ns <- session$ns
   
   # ============================================================================
   # DATOS: Ahora vienen de global.R (pre-cargados)
   # ============================================================================
-
+  
   tabla <- DATA_TABLA
   df_non_salary <- DATA_NON_SALARY
   df_non_salary_payer <- DATA_NON_SALARY_PAYER
@@ -109,7 +109,7 @@ labor_server <- function(input, output, session) {
   last_single_country <- reactiveVal(NULL)
   last_compare_mode <- reactiveVal("country")
   option1_selected(TRUE)
-
+  
   reset_across_defaults <- function() {
     ns_variables$country_sel <- "All"
     ns_variables$order_country <- NULL
@@ -139,12 +139,57 @@ labor_server <- function(input, output, session) {
     value
   }
   
+  # ---- Helper: countries that have data for the current selection ----
+  get_active_countries <- function(group0, groupE) {
+    df <- NULL
+    if (group0 == "all") {
+      df <- df_non_salary
+    } else if (group0 == "social") {
+      df <- get_group_data(groupE)
+    } else {
+      df <- get_group_data(group0)
+    }
+    if (is.null(df) || nrow(df) == 0) {
+      return(unique(df_non_salary$country))
+    }
+    # Only keep countries that have at least one non-NA, non-zero value
+    valid <- df %>%
+      dplyr::filter(!is.na(value), value != 0) %>%
+      dplyr::pull(country) %>%
+      unique()
+    if (length(valid) == 0) {
+      return(unique(df_non_salary$country))
+    }
+    valid
+  }
+  
+  # Update available countries whenever the main group selection changes
+  observe({
+    group0 <- safe_value(selected_group0(), "all")
+    groupE <- safe_value(selected_groupE(), "pensions")
+    valid_countries <- get_active_countries(group0, groupE)
+    ns_variables$countries <- c("All", valid_countries)
+    
+    # If the current selection includes countries no longer valid, reset
+    current <- ns_variables$country_sel
+    if (!is.null(current) && length(current) > 0 && !"All" %in% current) {
+      still_valid <- current[current %in% valid_countries]
+      if (length(still_valid) == 0) {
+        ns_variables$country_sel <- "All"
+        last_country_selection("All")
+      } else if (length(still_valid) < length(current)) {
+        ns_variables$country_sel <- still_valid
+        last_country_selection(still_valid)
+      }
+    }
+  })
+  
   plot_title_text <- function() {
     group0 <- safe_value(selected_group0(), "all")
     groupA <- safe_value(selected_groupA(), "total")
     groupD <- safe_value(selected_groupD(), "all_bonuses")
     groupE <- safe_value(selected_groupE(), "pensions")
-
+    
     subject <- switch(
       group0,
       all = "Non-salary labor costs",
@@ -159,7 +204,7 @@ labor_server <- function(input, output, session) {
       payroll_taxes = "Payroll taxes",
       "Non-salary labor costs"
     )
-
+    
     if (group0 == "bonuses_and_benefits" && groupA == "component") {
       subject <- switch(
         groupD,
@@ -171,7 +216,7 @@ labor_server <- function(input, output, session) {
         subject
       )
     }
-
+    
     view_phrase <- ""
     if (groupA == "payer") {
       view_phrase <- " by payer"
@@ -182,10 +227,10 @@ labor_server <- function(input, output, session) {
         view_phrase <- " by component"
       }
     }
-
+    
     country_phrase <- format_country_phrase(ns_variables$country_sel)
     wage_phrase <- format_wage_phrase(selected_groupB())
-
+    
     paste0(
       subject,
       view_phrase,
@@ -199,7 +244,7 @@ labor_server <- function(input, output, session) {
   
   y_axis_title_text <- function() {
     group0 <- safe_value(selected_group0(), "all")
-
+    
     if (group0 == "bonuses_and_benefits") {
       return("Bonuses and benefits as share of wages (%)")
     }
@@ -224,15 +269,183 @@ labor_server <- function(input, output, session) {
   
   plot_footer_annotations <- function() {
     access_date <- format(Sys.Date(), "%Y-%m-%d")
-    list(
+    mode <- safe_value(input$compare_mode, "country")
+    is_cross_country <- identical(mode, "country")
+    group0 <- safe_value(selected_group0(), "all")
+    groupA <- safe_value(selected_groupA(), "total")
+    groupD <- safe_value(selected_groupD(), "all_bonuses")
+    groupE <- safe_value(selected_groupE(), "pensions")
+    tenure_suffix <- ""
+    if (!is_cross_country && isTRUE(input$show_by_tenure)) {
+      tenure_suffix <- " and tenure (in years)"
+    }
+    
+    country_label <- "the selected country"
+    if (!is_cross_country) {
+      country_sel <- ns_variables$country_sel
+      if (!is.null(country_sel) && length(country_sel) > 0 && !"All" %in% country_sel) {
+        country_label <- country_display_name(country_sel[1])
+      } else if (!is.null(country_sel) && length(country_sel) > 1 && !"All" %in% country_sel) {
+        country_label <- "selected countries"
+      }
+    }
+    location_suffix <- if (is_cross_country) "" else paste0(" in ", country_label)
+    wage_clause <- paste0("by wage level", tenure_suffix, location_suffix)
+    
+    us_clause <- "US denotes the simple average across the states of New York, California, Texas, and Florida."
+    shared_costs_clause <- paste(
+      "These costs are shared between employers and employees and include mandatory contributions for pensions,",
+      "health insurance, occupational risk coverage, payroll taxes, and legally required bonuses and benefits."
+    )
+    shared_short_clause <- "These costs are shared between employers and employees."
+    paid_exclusively_employers <- "This component is paid exclusively by employers."
+    paid_exclusively_employer <- "This component is paid exclusively by employer."
+    non_quantifiable_clause <- paste(
+      "Non-quantifiable non-wage benefits include profit sharing bonuses (Chile, Dominican Republic, Ecuador,",
+      "Mexico, Peru, Bolivia), family allowances/subsidies (Bolivia, Colombia), transport subsidies (Brazil),",
+      "and relocation expenses (Ecuador)."
+    )
+    
+    note_text <- ""
+    note_sentences <- character(0)
+    plot_output_id <- ns("plot")
+    plot_width_px <- session$clientData[[paste0("output_", plot_output_id, "_width")]]
+    if (is.null(plot_width_px) || !is.finite(plot_width_px)) {
+      plot_width_px <- 900
+    }
+    note_width_px <- max(360, plot_width_px - 20)
+    avg_char_px <- 5.0
+    note_wrap_width <- floor(note_width_px / avg_char_px)
+    note_wrap_width <- max(90, min(note_wrap_width, 260))
+    if (group0 == "all") {
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum non-wage labor costs as a percentage of wages for formal employees ",
+          wage_clause,
+          "."
+        ),
+        shared_costs_clause
+      )
+      if (is_cross_country) {
+        note_sentences <- c(note_sentences, us_clause)
+      }
+    } else if (group0 == "bonuses_and_benefits") {
+      if (groupA == "component" && groupD %in% c("ab", "pl", "up", "ob")) {
+        component_label <- switch(
+          groupD,
+          ab = "annual and other periodic bonuses",
+          pl = "paid leave",
+          up = "unemployment protection",
+          ob = "other bonuses and benefits",
+          "bonuses and benefits"
+        )
+        payer_clause <- if (groupD == "pl" && is_cross_country) {
+          paid_exclusively_employer
+        } else {
+          paid_exclusively_employers
+        }
+        note_sentences <- c(
+          paste0(
+            "Note: Bars show the statutory minimum and maximum cost of legally mandated ",
+            component_label,
+            " as a percentage of wages for formal employees ",
+            wage_clause,
+            "."
+          ),
+          payer_clause
+        )
+        if (is_cross_country) {
+          note_sentences <- c(note_sentences, us_clause)
+        }
+      } else {
+        note_sentences <- c(
+          paste0(
+            "Note: Bars show the statutory minimum and maximum cost of legally mandated bonuses and benefits as a percentage of wages for formal employees ",
+            wage_clause,
+            "."
+          ),
+          paid_exclusively_employers
+        )
+        if (is_cross_country) {
+          note_sentences <- c(note_sentences, non_quantifiable_clause, us_clause)
+        }
+      }
+    } else if (group0 == "social") {
+      component_label <- switch(
+        groupE,
+        pensions = "pension contributions",
+        health = "health contributions",
+        occupational_risk = "occupational risk contributions",
+        "social security contributions"
+      )
+      payer_clause <- if (groupE == "occupational_risk") {
+        paid_exclusively_employers
+      } else {
+        shared_short_clause
+      }
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum ",
+          component_label,
+          " as a percentage of wages for formal employees ",
+          wage_clause,
+          "."
+        ),
+        payer_clause
+      )
+      if (is_cross_country) {
+        note_sentences <- c(note_sentences, us_clause)
+      }
+    } else if (group0 == "payroll_taxes") {
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum payroll taxes as a percentage of wages for formal employees ",
+          wage_clause,
+          "."
+        ),
+        shared_short_clause
+      )
+      if (is_cross_country) {
+        note_sentences <- c(note_sentences, us_clause)
+      }
+    } else {
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum non-wage labor costs as a percentage of wages for formal employees ",
+          wage_clause,
+          "."
+        )
+      )
+      if (is_cross_country) {
+        note_sentences <- c(note_sentences, us_clause)
+      }
+    }
+    
+    note_text <- paste(note_sentences, collapse = " ")
+    note_lines <- strwrap(note_text, width = note_wrap_width)
+    if (length(note_lines) == 0) {
+      note_lines <- ""
+    }
+    note_text <- paste(note_lines, collapse = "<br>")
+    note_line_count <- length(note_lines)
+    line_height_px <- 14
+    note_yshift <- -48
+    source_padding_px <- 10
+    source_yshift <- note_yshift - (line_height_px * note_line_count) - source_padding_px
+    margin_b <- max(240, abs(source_yshift) + line_height_px + 40)
+    
+    annotations <- list(
       list(
-        text = "Note: TBD",
+        text = note_text,
         xref = "paper",
         yref = "paper",
         x = 0,
-        y = -0.26,
+        y = 0,
         xanchor = "left",
         yanchor = "top",
+        align = "left",
+        yshift = note_yshift,
+        width = note_width_px,
         showarrow = FALSE,
         font = list(family = plotly_font_family, size = 10)
       ),
@@ -244,13 +457,17 @@ labor_server <- function(input, output, session) {
         xref = "paper",
         yref = "paper",
         x = 0,
-        y = -0.34,
+        y = 0,
         xanchor = "left",
         yanchor = "top",
+        align = "left",
+        yshift = source_yshift,
         showarrow = FALSE,
         font = list(family = plotly_font_family, size = 10)
       )
     )
+    attr(annotations, "margin_b") <- margin_b
+    annotations
   }
   
   apply_plot_font <- function(fig) {
@@ -263,6 +480,11 @@ labor_server <- function(input, output, session) {
         traces = idx
       )
     }
+    annotations <- plot_footer_annotations()
+    margin_b <- attr(annotations, "margin_b")
+    if (is.null(margin_b) || is.na(margin_b)) {
+      margin_b <- 200
+    }
     fig %>%
       layout(
         font = list(family = plotly_font_family),
@@ -271,8 +493,8 @@ labor_server <- function(input, output, session) {
           x = 0.5,
           xanchor = "center"
         ),
-        annotations = plot_footer_annotations(),
-        margin = list(t = 60, b = 155)
+        annotations = annotations,
+        margin = list(t = 60, b = margin_b)
       )
   }
   
@@ -309,7 +531,7 @@ labor_server <- function(input, output, session) {
       )
     )
   })
-
+  
   output$mw_selection_ui <- renderUI({
     mode <- input$compare_mode
     if (is.null(mode) || length(mode) == 0) {
@@ -327,7 +549,7 @@ labor_server <- function(input, output, session) {
     if (!allow_multiple && length(selection) > 1) {
       selection <- selection[1]
     }
-
+    
     div(
       class = "pretty-select mw-select",
       selectizeInput(
@@ -358,7 +580,7 @@ labor_server <- function(input, output, session) {
     if (is.null(selection) || length(selection) == 0) {
       selection <- "All"
     }
-
+    
     previous <- last_country_selection()
     if ("All" %in% selection && length(selection) > 1) {
       if (!("All" %in% previous)) {
@@ -367,7 +589,7 @@ labor_server <- function(input, output, session) {
         selection <- setdiff(selection, "All")
       }
     }
-
+    
     mode <- input$compare_mode
     if (is.null(mode) || length(mode) == 0) {
       mode <- "country"
@@ -383,18 +605,18 @@ labor_server <- function(input, output, session) {
         selection <- selection[1]
       }
     }
-
+    
     if (!identical(selection, input$country_selection_user)) {
       updateSelectizeInput(session, ns("country_selection_user"), selected = selection)
     }
-
+    
     ns_variables$country_sel <- selection
     last_country_selection(selection)
     if (length(selection) == 1 && selection != "All") {
       last_single_country(selection)
     }
   })
-
+  
   option2_choices_for_group <- function(group0) {
     switch(
       group0,
@@ -422,14 +644,14 @@ labor_server <- function(input, output, session) {
       tryCatch(readRDS(path), error = function(e) NULL)
     }
   }
-
+  
   observeEvent(selected_group0(), {
     valid_choices <- option2_choices_for_group(selected_group0())
     if (!selected_groupA() %in% valid_choices) {
       selected_groupA(valid_choices[1])
     }
   })
-
+  
   observeEvent(input$compare_mode, {
     mode <- input$compare_mode
     if (is.null(mode) || length(mode) == 0) {
@@ -484,28 +706,28 @@ labor_server <- function(input, output, session) {
     if (length(selection) == 0) {
       selection <- last_wage_selection()
     }
-
+    
     mode <- input$compare_mode
     if (is.null(mode)) {
       mode <- "country"
     }
-
+    
     if (identical(mode, "country") && length(selection) > 1) {
       selection <- selection[1]
       showNotification("Across-country comparisons use one wage level.", type = "message")
     }
-
+    
     if (identical(mode, "wage")) {
       countries <- ns_variables$country_sel
       if (is.null(countries) || length(countries) != 1 || "All" %in% countries) {
         selection <- last_wage_selection()
       }
     }
-
+    
     if (!identical(selection, input$mw_selection)) {
       updateSelectizeInput(session, ns("mw_selection"), selected = selection)
     }
-
+    
     selected_groupB(selection)
     last_wage_selection(selection)
   })
@@ -548,6 +770,8 @@ labor_server <- function(input, output, session) {
   
   # ---- Graph ----
   output$plot <- renderPlotly({
+    
+    # Show loading message
     
     # Requirements
     req(selected_groupA())
@@ -607,7 +831,7 @@ labor_server <- function(input, output, session) {
       }
     }
     y_axis_title <- y_axis_title_text()
-
+    
     apply_wage_panels <- function(df) {
       if (!compare_wages || !"wage" %in% names(df)) {
         return(df)
@@ -627,7 +851,7 @@ labor_server <- function(input, output, session) {
           Type = factor(Type, levels = stack_order)
         ) %>%
         arrange(Scenario, wage)
-
+      
       fig <- plot_ly(type = "bar")
       for (type in levels(df$Type)) {
         sub <- df %>% filter(Type == type)
@@ -653,7 +877,7 @@ labor_server <- function(input, output, session) {
           legendrank = match(type, legend_order)
         )
       }
-
+      
       fig <- fig %>%
         layout(
           barmode = "stack",
@@ -680,7 +904,7 @@ labor_server <- function(input, output, session) {
             traceorder = legend_traceorder
           )
         )
-
+      
       fig <- apply_plot_font(fig)
       fig <- fig %>% layout(annotations = plot_footer_annotations())
       fig
@@ -775,7 +999,7 @@ labor_server <- function(input, output, session) {
           barmode = "stack"
         )
     }
-
+    
     prepare_payer_data <- function(df, aggregate = FALSE) {
       if (is.null(df)) {
         return(NULL)
@@ -802,7 +1026,7 @@ labor_server <- function(input, output, session) {
         ) %>%
         filter(!is.na(value))
     }
-
+    
     plot_payer_subplots <- function(df, y_axis_title) {
       if (is.null(df) || nrow(df) == 0) {
         showNotification("No Data for this combination.", type = "error")
@@ -820,19 +1044,19 @@ labor_server <- function(input, output, session) {
           Scenario = as.character(Scenario)
         ) %>%
         arrange(country)
-
+      
       colors <- c("Employer" = "#002244", "Employee" = "#00C1FF")
       paises <- unique(df$country)
       plot_list <- list()
-
+      
       for (i in seq_along(paises)) {
         pais <- paises[i]
         data_pais <- df %>% filter(country == pais)
-
+        
         if (nrow(data_pais) == 0) next
-
+        
         show_legend <- i == 1
-
+        
         p <- plot_ly(
           data = data_pais,
           x = ~Scenario,
@@ -867,10 +1091,10 @@ labor_server <- function(input, output, session) {
             ),
             barmode = "stack"
           )
-
+        
         plot_list[[i]] <- p
       }
-
+      
       n_plots <- length(plot_list)
       fig <- subplot(
         plot_list,
@@ -895,19 +1119,19 @@ labor_server <- function(input, output, session) {
             t = 20
           )
         )
-
+      
       apply_plot_font(fig)
     }
-
+    
     # ========================================================================
     # COMPARE WAGES CASES
     # ========================================================================
-
+    
     if (compare_wages && groupA == "total") {
       if (length(ns_variables$country_sel) != 1 || "All" %in% ns_variables$country_sel) {
         return(NULL)
       }
-
+      
       if (group0 == "all") {
         df <- df_non_salary %>%
           dplyr::filter(
@@ -950,19 +1174,19 @@ labor_server <- function(input, output, session) {
           ) %>%
           select(wage, Scenario, value)
       }
-
+      
       if (nrow(df) == 0) {
         showNotification("No Data for this combination.", type = "error")
         return(NULL)
       }
-
+      
       df <- df %>%
         mutate(
           wage = factor(wage, levels = wage_filter),
           Scenario = factor(Scenario, levels = c("Min", "Max"))
         ) %>%
         arrange(Scenario, wage)
-
+      
       fig <- plot_ly(
         data = df,
         x = list(df$Scenario, df$wage),
@@ -988,17 +1212,17 @@ labor_server <- function(input, output, session) {
             showline = FALSE
           )
         )
-
+      
       fig <- apply_plot_font(fig)
       fig <- fig %>% layout(annotations = plot_footer_annotations())
       return(fig)
     }
-
+    
     if (compare_wages && groupA == "component" && group0 == "all") {
       if (length(ns_variables$country_sel) != 1 || "All" %in% ns_variables$country_sel) {
         return(NULL)
       }
-
+      
       df <- df_non_salary_component %>%
         dplyr::filter(
           wage %in% wage_filter,
@@ -1013,12 +1237,12 @@ labor_server <- function(input, output, session) {
                                              "Payroll Taxes"))))
         ) %>%
         select(wage, Scenario, Type, value)
-
+      
       if (nrow(df) == 0) {
         showNotification("No Data for this combination.", type = "error")
         return(NULL)
       }
-
+      
       return(build_multicategory_stack(
         df,
         component_palette,
@@ -1027,12 +1251,12 @@ labor_server <- function(input, output, session) {
         legend_order = component_legend_order
       ))
     }
-
+    
     if (compare_wages && groupA == "component" && group0 == "bonuses_and_benefits") {
       if (length(ns_variables$country_sel) != 1 || "All" %in% ns_variables$country_sel) {
         return(NULL)
       }
-
+      
       # OPTIMIZADO: get_component_data() en lugar de readRDS()
       df <- get_component_data("bonuses_and_benefits")
       if (is.null(df)) {
@@ -1052,18 +1276,18 @@ labor_server <- function(input, output, session) {
                                       ifelse(component == "ob", "Other bonuses", NA))))
         ) %>%
         select(country, wage, Scenario, Type, value)
-
+      
       df <- df %>%
         left_join(
           bonus_hover_lookup,
           by = c("country", "wage", "Scenario" = "group", "Type" = "Type")
         )
-
+      
       if (nrow(df) == 0) {
         showNotification("No Data for this combination.", type = "error")
         return(NULL)
       }
-
+      
       colors <- c(
         "Annual and other periodic bonuses" = "#002244",
         "Paid Leave" = "#8EA2BF",
@@ -1072,12 +1296,12 @@ labor_server <- function(input, output, session) {
       )
       return(build_multicategory_stack(df, colors, y_axis_title))
     }
-
+    
     if (compare_wages && groupA == "component" && group0 == "social") {
       if (length(ns_variables$country_sel) != 1 || "All" %in% ns_variables$country_sel) {
         return(NULL)
       }
-
+      
       # OPTIMIZADO: get_group_data() en lugar de readRDS()
       df <- get_group_data(groupE)
       if (is.null(df)) {
@@ -1093,19 +1317,19 @@ labor_server <- function(input, output, session) {
           Scenario = ifelse(grepl("_min$", min_max_total), "Min", "Max")
         ) %>%
         select(wage, Scenario, value)
-
+      
       if (nrow(df) == 0) {
         showNotification("No Data for this combination.", type = "error")
         return(NULL)
       }
-
+      
       df <- df %>%
         mutate(
           wage = factor(wage, levels = wage_filter),
           Scenario = factor(Scenario, levels = c("Min", "Max"))
         ) %>%
         arrange(Scenario, wage)
-
+      
       fig <- plot_ly(
         data = df,
         x = list(df$Scenario, df$wage),
@@ -1131,7 +1355,7 @@ labor_server <- function(input, output, session) {
             showline = FALSE
           )
         )
-
+      
       fig <- apply_plot_font(fig)
       fig <- fig %>% layout(annotations = plot_footer_annotations())
       return(fig)
@@ -1163,7 +1387,7 @@ labor_server <- function(input, output, session) {
       } else {
         ns_variables$countries <- c("All", unique(df_raw$country))
       }
-
+      
       df_long <- prepare_payer_data(
         df_raw,
         aggregate = identical(payer_key, "payroll_taxes")
@@ -1172,7 +1396,7 @@ labor_server <- function(input, output, session) {
         showNotification("No Data for this combination.", type = "error")
         return(NULL)
       }
-
+      
       return(plot_payer_subplots(df_long, y_axis_title))
     }
     
@@ -1378,114 +1602,328 @@ labor_server <- function(input, output, session) {
       if ("All" %in%  ns_variables$country_sel) {
         showNotification("Please select only countries.", type = "error")
         return(NULL)
-      }
-      ns_variables$countries=c("All",unique(df_non_salary$country))
-      # Filtering total non salary
-      df <- df_non_salary %>%
-        filter(
-          wage %in% wage_filter,
-          country %in% ns_variables$country_sel
-        ) %>%
-        apply_wage_panels()
-      
-      if (nrow(df) == 0) {
-        showNotification("No Data for this combination.", type = "error")
-        return(NULL)
-      }
-      
-      df_wide <- df %>%
-        tidyr::pivot_wider(
-          names_from = type,
-          values_from = value
-        ) %>%
-        arrange(t_min) %>%
-        mutate(country = factor(country, levels = country))
-      
-      ns_variables$order_country <- unique(as.character(df_wide$country))
-      
-      df_mm <- df_wide %>%
-        tidyr::pivot_longer(
-          cols = c(t_min, t_max),
-          names_to = "Scenario",
-          values_to = "value"
-        ) %>%
-        mutate(
-          Scenario = ifelse(Scenario == "t_min", "Min", "Max"),
-          Scenario = factor(Scenario, levels = c("Min", "Max")),
-          country  = factor(country, levels = panel_order())
-        )
-      
-      ns_variables$df_final=df_mm
-      
-      paises <- unique(df_mm$country)
-      plot_list <- list()
-      
-      for (i in seq_along(paises)) {
+        # Filtering total non salary
+        df <- df_non_salary %>%
+          filter(
+            wage %in% wage_filter,
+            country %in% ns_variables$country_sel
+          ) %>%
+          apply_wage_panels()
         
-        pais <- paises[i]
-        data_pais <- df_mm %>% filter(country == pais)
+        if (nrow(df) == 0) {
+          showNotification("No Data for this combination.", type = "error")
+          return(NULL)
+        }
         
-        p <- plot_ly(
-          data = data_pais,
-          x = ~Scenario,
-          y = ~value,
-          type = "bar",
-          color = ~Scenario,
-          colors = c("Min" = "#00C1FF", "Max" = "#002244"),
-          showlegend = FALSE
-        ) %>%
-          layout(
-            barmode = "stack",
-            
-            paper_bgcolor = "rgba(0,0,0,0)",
-            plot_bgcolor  = "rgba(0,0,0,0)",
-            
-            xaxis = list(
-              title = pais,
-              showgrid = FALSE,
-              zeroline = FALSE,
-              showline = FALSE,
-              tickangle = 90
-            ),
-            
-            yaxis = list(
-              title = ifelse(i == 1, y_axis_title, ""),
-              showgrid = FALSE,
-              zeroline = FALSE,
-              showline = FALSE
-            )
+        df_wide <- df %>%
+          tidyr::pivot_wider(
+            names_from = type,
+            values_from = value
+          ) %>%
+          arrange(t_min) %>%
+          mutate(country = factor(country, levels = country))
+        
+        ns_variables$order_country <- unique(as.character(df_wide$country))
+        
+        df_mm <- df_wide %>%
+          tidyr::pivot_longer(
+            cols = c(t_min, t_max),
+            names_to = "Scenario",
+            values_to = "value"
+          ) %>%
+          mutate(
+            Scenario = ifelse(Scenario == "t_min", "Min", "Max"),
+            Scenario = factor(Scenario, levels = c("Min", "Max")),
+            country  = factor(country, levels = panel_order())
           )
         
-        plot_list[[i]] <- p
+        ns_variables$df_final=df_mm
+        
+        paises <- unique(df_mm$country)
+        plot_list <- list()
+        
+        for (i in seq_along(paises)) {
+          
+          pais <- paises[i]
+          data_pais <- df_mm %>% filter(country == pais)
+          
+          p <- plot_ly(
+            data = data_pais,
+            x = ~Scenario,
+            y = ~value,
+            type = "bar",
+            color = ~Scenario,
+            colors = c("Min" = "#00C1FF", "Max" = "#002244"),
+            showlegend = FALSE
+          ) %>%
+            layout(
+              barmode = "stack",
+              
+              paper_bgcolor = "rgba(0,0,0,0)",
+              plot_bgcolor  = "rgba(0,0,0,0)",
+              
+              xaxis = list(
+                title = pais,
+                showgrid = FALSE,
+                zeroline = FALSE,
+                showline = FALSE,
+                tickangle = 90
+              ),
+              
+              yaxis = list(
+                title = ifelse(i == 1, y_axis_title, ""),
+                showgrid = FALSE,
+                zeroline = FALSE,
+                showline = FALSE
+              )
+            )
+          
+          plot_list[[i]] <- p
+        }
+        
+        fig <- subplot(
+          plot_list,
+          nrows = 1,
+          shareY = TRUE,
+          titleX = TRUE,
+          widths = rep(1 / length(plot_list), length(plot_list)),
+          margin = 0.01
+        ) %>%
+          layout(
+            margin = list(l = 70, r = 30, b = 110, t = 20),
+            paper_bgcolor = "rgba(0,0,0,0)",
+            plot_bgcolor  = "rgba(0,0,0,0)"
+          )
+        
+        return(apply_plot_font(fig))
       }
       
-      fig <- subplot(
-        plot_list,
-        nrows = 1,
-        shareY = TRUE,
-        titleX = TRUE,
-        widths = rep(1 / length(plot_list), length(plot_list)),
-        margin = 0.01
-      ) %>%
-        layout(
-          margin = list(l = 70, r = 30, b = 110, t = 20),
-          paper_bgcolor = "rgba(0,0,0,0)",
-          plot_bgcolor  = "rgba(0,0,0,0)"
-        )
+      # ---- ALL By Payer ----
       
-      return(apply_plot_font(fig))
-    }
-    
-    # ---- ALL By Payer ----
-    
-    if (group0=="all" & groupA == "payer" & length(ns_variables$country_sel)==1) {
+      if (group0=="all" & groupA == "payer" & length(ns_variables$country_sel)==1) {
+        
+        if(ns_variables$country_sel=="All"){
+          df_long <- df_non_salary_payer %>%
+            filter(
+              wage %in% wage_filter
+            ) %>%
+            apply_wage_panels() %>%
+            select(country, type_by_payer, value) %>%
+            mutate(
+              group = ifelse(grepl("_min$", type_by_payer), "Min", "Max"),
+              payer = ifelse(grepl("^st_er", type_by_payer), "Employer", "Employee"),
+              group = factor(group, levels = c("Min", "Max"))
+            )
+          
+          df_long <- df_long %>%
+            mutate(country = factor(country, levels = panel_order())) %>% 
+            arrange(country)
+          
+          if (nrow(df_long) == 0) {
+            showNotification("No Data for this combination.", type = "error")
+            return(NULL)
+          }
+          
+          df <- df_long
+          df$Type <- factor(df$payer, levels = c("Employee", "Employer"))
+          df$Scenario <- factor(df$group, levels = c("Min", "Max"))
+          
+          colors <- c("Employer" = "#002244", "Employee" = "#00C1FF")
+          
+          paises <- unique(df$country)
+          plot_list <- list()
+          
+          for (i in seq_along(paises)) {
+            
+            pais <- paises[i]
+            data_pais <- df %>% filter(country == pais)
+            
+            if (nrow(data_pais) == 0) next
+            
+            show_legend <- i == 1
+            
+            p <- plot_ly(
+              data = data_pais,
+              x = ~Scenario,
+              y = ~value,
+              type = "bar",
+              color = ~Type,
+              colors = colors,
+              legendgroup = ~Type,
+              showlegend = show_legend,
+              hoverinfo = "y+name"
+            ) %>%
+              layout(
+                paper_bgcolor = "rgba(0,0,0,0)",
+                plot_bgcolor  = "rgba(0,0,0,0)",
+                xaxis = list(
+                  title = pais,
+                  showgrid = FALSE,
+                  zeroline = FALSE,
+                  showline = FALSE,
+                  tickangle = 90
+                ),
+                
+                yaxis = list(
+                  title = ifelse(i == 1, y_axis_title, ""),
+                  showgrid = FALSE,
+                  zeroline = FALSE,
+                  showline = FALSE
+                ),
+                
+                barmode = "stack"
+              )
+            
+            plot_list[[i]] <- p
+          }
+          
+          n_plots <- length(plot_list)
+          fig <- subplot(
+            plot_list,
+            nrows = 1,
+            shareY = TRUE,
+            titleX = TRUE,
+            widths = rep(1 / n_plots, n_plots), 
+            margin = 0.01
+          ) %>%
+            layout(
+              title = "",
+              
+              legend = list(
+                orientation = "h",
+                x = 0.5,
+                xanchor = "center",
+                y = -0.15
+              ),
+              
+              margin = list(
+                l = 70,
+                r = 30,
+                b = 110,
+                t = 20
+              )
+            )
+          return(apply_plot_font(fig))
+        }
+        
+        else{
+          
+          df_long <- df_non_salary_payer %>%
+            filter(
+              wage %in% wage_filter,
+              country== ns_variables$country_sel
+            ) %>%
+            apply_wage_panels() %>%
+            select(country, type_by_payer, value) %>%
+            mutate(
+              group = ifelse(grepl("_min$", type_by_payer), "Min", "Max"),
+              payer = ifelse(grepl("^st_er", type_by_payer), "Employer", "Employee"),
+              group = factor(group, levels = c("Min", "Max"))
+            )
+          
+          
+          if (nrow(df_long) == 0) {
+            showNotification("No Data for this combination.", type = "error")
+            return(NULL)
+          }
+          
+          
+          df <- df_long
+          df$Type <- factor(df$payer, levels = c("Employee", "Employer"))
+          df$Scenario <- factor(df$group, levels = c("Min", "Max"))
+          
+          colors <- c("Employer" = "#002244", "Employee" = "#00C1FF")
+          
+          paises <- unique(df$country)
+          plot_list <- list()
+          
+          for (i in seq_along(paises)) {
+            
+            pais <- paises[i]
+            data_pais <- df %>% filter(country == pais)
+            
+            if (nrow(data_pais) == 0) next
+            
+            show_legend <- i == 1
+            
+            p <- plot_ly(
+              data = data_pais,
+              x = ~Scenario,
+              y = ~value,
+              type = "bar",
+              color = ~Type,
+              colors = colors,
+              legendgroup = ~Type,
+              showlegend = show_legend,
+              hoverinfo = "y+name"
+            ) %>%
+              layout(
+                paper_bgcolor = "rgba(0,0,0,0)",
+                plot_bgcolor  = "rgba(0,0,0,0)",
+                
+                xaxis = list(
+                  title = pais,
+                  showgrid = FALSE,
+                  zeroline = FALSE,
+                  showline = FALSE,
+                  tickangle = 90
+                ),
+                
+                yaxis = list(
+                  title = ifelse(i == 1, y_axis_title, ""),
+                  showgrid = FALSE,
+                  zeroline = FALSE,
+                  showline = FALSE
+                ),
+                
+                barmode = "stack"
+              )
+            
+            plot_list[[i]] <- p
+          }
+          
+          n_plots <- length(plot_list)
+          fig <- subplot(
+            plot_list,
+            nrows = 1,
+            shareY = TRUE,
+            titleX = TRUE,
+            widths = rep(1 / n_plots, n_plots), 
+            margin = 0.01
+          ) %>%
+            layout(
+              title = "",
+              
+              legend = list(
+                orientation = "h",
+                x = 0.5,
+                xanchor = "center",
+                y = -0.15
+              ),
+              
+              margin = list(
+                l = 70,
+                r = 30,
+                b = 110,
+                t = 20
+              )
+            )
+          return(apply_plot_font(fig))
+        }
+        
+      }
       
-      ns_variables$countries=c("All",unique(df_non_salary$country))
-      
-      if(ns_variables$country_sel=="All"){
+      if (group0=="all" & groupA == "payer" & length(ns_variables$country_sel)>1) {
+        
+        if ("All" %in%  ns_variables$country_sel) {
+          showNotification("Please select only countries.", type = "error")
+          return(NULL)
+        }
+        
         df_long <- df_non_salary_payer %>%
           filter(
-            wage %in% wage_filter
+            wage %in% wage_filter,
+            country %in% ns_variables$country_sel
           ) %>%
           apply_wage_panels() %>%
           select(country, type_by_payer, value) %>%
@@ -1499,10 +1937,12 @@ labor_server <- function(input, output, session) {
           mutate(country = factor(country, levels = panel_order())) %>% 
           arrange(country)
         
+        
         if (nrow(df_long) == 0) {
           showNotification("No Data for this combination.", type = "error")
           return(NULL)
         }
+        
         
         df <- df_long
         df$Type <- factor(df$payer, levels = c("Employee", "Employer"))
@@ -1513,45 +1953,34 @@ labor_server <- function(input, output, session) {
         paises <- unique(df$country)
         plot_list <- list()
         
+        ns_variables$df_final=df
         for (i in seq_along(paises)) {
-          
           pais <- paises[i]
           data_pais <- df %>% filter(country == pais)
           
-          if (nrow(data_pais) == 0) next
+          show_legend <- ifelse(i == 1, TRUE, FALSE)
           
-          show_legend <- i == 1
-          
-          p <- plot_ly(
-            data = data_pais,
-            x = ~Scenario,
-            y = ~value,
-            type = "bar",
-            color = ~Type,
-            colors = colors,
-            legendgroup = ~Type,
-            showlegend = show_legend,
-            hoverinfo = "y+name"
-          ) %>%
+          p <- plot_ly(data_pais, x = ~Scenario, y = ~value, type = 'bar',
+                       color = ~Type, colors = colors, legendgroup = ~Type,
+                       showlegend = show_legend, text = ~value,
+                       hoverinfo = "text+y+name") %>%
             layout(
-              paper_bgcolor = "rgba(0,0,0,0)",
-              plot_bgcolor  = "rgba(0,0,0,0)",
+              paper_bgcolor = "rgba(0,0,0,0)",   
+              plot_bgcolor  = "rgba(0,0,0,0)", 
               xaxis = list(
                 title = pais,
                 showgrid = FALSE,
                 zeroline = FALSE,
-                showline = FALSE,
-                tickangle = 90
+                showline = FALSE
               ),
-              
               yaxis = list(
                 title = ifelse(i == 1, y_axis_title, ""),
+                range = c(0, 140),
                 showgrid = FALSE,
                 zeroline = FALSE,
                 showline = FALSE
               ),
-              
-              barmode = "stack"
+              barmode = 'stack'
             )
           
           plot_list[[i]] <- p
@@ -1583,225 +2012,12 @@ labor_server <- function(input, output, session) {
               t = 20
             )
           )
+        
         return(apply_plot_font(fig))
       }
       
-      else{
-        
-        df_long <- df_non_salary_payer %>%
-          filter(
-            wage %in% wage_filter,
-            country== ns_variables$country_sel
-          ) %>%
-          apply_wage_panels() %>%
-          select(country, type_by_payer, value) %>%
-          mutate(
-            group = ifelse(grepl("_min$", type_by_payer), "Min", "Max"),
-            payer = ifelse(grepl("^st_er", type_by_payer), "Employer", "Employee"),
-            group = factor(group, levels = c("Min", "Max"))
-          )
-        
-        
-        if (nrow(df_long) == 0) {
-          showNotification("No Data for this combination.", type = "error")
-          return(NULL)
-        }
-        
-        
-        df <- df_long
-        df$Type <- factor(df$payer, levels = c("Employee", "Employer"))
-        df$Scenario <- factor(df$group, levels = c("Min", "Max"))
-        
-        colors <- c("Employer" = "#002244", "Employee" = "#00C1FF")
-        
-        paises <- unique(df$country)
-        plot_list <- list()
-        
-        for (i in seq_along(paises)) {
-          
-          pais <- paises[i]
-          data_pais <- df %>% filter(country == pais)
-          
-          if (nrow(data_pais) == 0) next
-          
-          show_legend <- i == 1
-          
-          p <- plot_ly(
-            data = data_pais,
-            x = ~Scenario,
-            y = ~value,
-            type = "bar",
-            color = ~Type,
-            colors = colors,
-            legendgroup = ~Type,
-            showlegend = show_legend,
-            hoverinfo = "y+name"
-          ) %>%
-            layout(
-              paper_bgcolor = "rgba(0,0,0,0)",
-              plot_bgcolor  = "rgba(0,0,0,0)",
-              
-              xaxis = list(
-                title = pais,
-                showgrid = FALSE,
-                zeroline = FALSE,
-                showline = FALSE,
-                tickangle = 90
-              ),
-              
-              yaxis = list(
-                title = ifelse(i == 1, y_axis_title, ""),
-                showgrid = FALSE,
-                zeroline = FALSE,
-                showline = FALSE
-              ),
-              
-              barmode = "stack"
-            )
-          
-          plot_list[[i]] <- p
-        }
-        
-        n_plots <- length(plot_list)
-        fig <- subplot(
-          plot_list,
-          nrows = 1,
-          shareY = TRUE,
-          titleX = TRUE,
-          widths = rep(1 / n_plots, n_plots), 
-          margin = 0.01
-        ) %>%
-          layout(
-            title = "",
-            
-            legend = list(
-              orientation = "h",
-              x = 0.5,
-              xanchor = "center",
-              y = -0.15
-            ),
-            
-            margin = list(
-              l = 70,
-              r = 30,
-              b = 110,
-              t = 20
-            )
-          )
-        return(apply_plot_font(fig))
-      }
+      # ---- ALL by Component ----
       
-    }
-    
-    if (group0=="all" & groupA == "payer" & length(ns_variables$country_sel)>1) {
-      
-      ns_variables$countries=c("All",unique(df_non_salary$country))
-      
-      if ("All" %in%  ns_variables$country_sel) {
-        showNotification("Please select only countries.", type = "error")
-        return(NULL)
-      }
-      
-      df_long <- df_non_salary_payer %>%
-        filter(
-          wage %in% wage_filter,
-          country %in% ns_variables$country_sel
-        ) %>%
-        apply_wage_panels() %>%
-        select(country, type_by_payer, value) %>%
-        mutate(
-          group = ifelse(grepl("_min$", type_by_payer), "Min", "Max"),
-          payer = ifelse(grepl("^st_er", type_by_payer), "Employer", "Employee"),
-          group = factor(group, levels = c("Min", "Max"))
-        )
-      
-      df_long <- df_long %>%
-        mutate(country = factor(country, levels = panel_order())) %>% 
-        arrange(country)
-      
-      
-      if (nrow(df_long) == 0) {
-        showNotification("No Data for this combination.", type = "error")
-        return(NULL)
-      }
-      
-      
-      df <- df_long
-      df$Type <- factor(df$payer, levels = c("Employee", "Employer"))
-      df$Scenario <- factor(df$group, levels = c("Min", "Max"))
-      
-      colors <- c("Employer" = "#002244", "Employee" = "#00C1FF")
-      
-      paises <- unique(df$country)
-      plot_list <- list()
-      
-      ns_variables$df_final=df
-      for (i in seq_along(paises)) {
-        pais <- paises[i]
-        data_pais <- df %>% filter(country == pais)
-        
-        show_legend <- ifelse(i == 1, TRUE, FALSE)
-        
-        p <- plot_ly(data_pais, x = ~Scenario, y = ~value, type = 'bar',
-                     color = ~Type, colors = colors, legendgroup = ~Type,
-                     showlegend = show_legend, text = ~value,
-                     hoverinfo = "text+y+name") %>%
-          layout(
-            paper_bgcolor = "rgba(0,0,0,0)",   
-            plot_bgcolor  = "rgba(0,0,0,0)", 
-            xaxis = list(
-              title = pais,
-              showgrid = FALSE,
-              zeroline = FALSE,
-              showline = FALSE
-            ),
-            yaxis = list(
-              title = ifelse(i == 1, y_axis_title, ""),
-              range = c(0, 140),
-              showgrid = FALSE,
-              zeroline = FALSE,
-              showline = FALSE
-            ),
-            barmode = 'stack'
-          )
-        
-        plot_list[[i]] <- p
-      }
-      
-      n_plots <- length(plot_list)
-      fig <- subplot(
-        plot_list,
-        nrows = 1,
-        shareY = TRUE,
-        titleX = TRUE,
-        widths = rep(1 / n_plots, n_plots), 
-        margin = 0.01
-      ) %>%
-        layout(
-          title = "",
-          
-          legend = list(
-            orientation = "h",
-            x = 0.5,
-            xanchor = "center",
-            y = -0.15
-          ),
-          
-          margin = list(
-            l = 70,
-            r = 30,
-            b = 110,
-            t = 20
-          )
-        )
-      
-      return(apply_plot_font(fig))
-    }
-    
-    # ---- ALL by Component ----
-
-    if (group0=="all" & groupA == "component" & length(ns_variables$country_sel)==1) {
-      ns_variables$countries=c("All",unique(df_non_salary$country))
       if(ns_variables$country_sel=="All"){
         df_long <- df_non_salary_component %>%
           filter(
@@ -1983,7 +2199,6 @@ labor_server <- function(input, output, session) {
     }
     
     if (group0=="all" & groupA == "component" & length(ns_variables$country_sel)>1) {
-      ns_variables$countries=c("All",unique(df_non_salary$country))
       
       if ("All" %in%  ns_variables$country_sel) {
         showNotification("Please select only countries.", type = "error")
@@ -2086,8 +2301,8 @@ labor_server <- function(input, output, session) {
     if (groupA == "total" &&
         group0 %in% c("bonuses_and_benefits", "payroll_taxes", "social") &&
         length(ns_variables$country_sel) == 1) {
-    
-    if(ns_variables$country_sel=="All"){
+      
+      if(ns_variables$country_sel=="All"){
         # OPTIMIZADO: get_group_data() en lugar de readRDS()
         data_key <- if (group0 == "social") groupE else group0
         df <- get_group_data(data_key)
@@ -2105,8 +2320,8 @@ labor_server <- function(input, output, session) {
             type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
           )
         ns_variables$countries=c("All",unique(df$country))
-      
-    
+        
+        
         
         if (nrow(df) == 0) {
           showNotification("No Data for this combination.", type = "error")
@@ -2193,8 +2408,8 @@ labor_server <- function(input, output, session) {
           )
         
         return(apply_plot_font(fig))
-    }
-    else{
+      }
+      else{
         # OPTIMIZADO: get_group_data() en lugar de readRDS()
         data_key <- if (group0 == "social") groupE else group0
         df <- get_group_data(data_key)
@@ -2212,7 +2427,7 @@ labor_server <- function(input, output, session) {
           mutate(
             type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
           )
-      
+        
         
         if (nrow(df) == 0) {
           showNotification("No Data for this combination.", type = "error")
@@ -2300,7 +2515,7 @@ labor_server <- function(input, output, session) {
           )
         
         return(apply_plot_font(fig))
-    }
+      }
     }
     
     if (groupA == "total" &&
@@ -2311,111 +2526,111 @@ labor_server <- function(input, output, session) {
         showNotification("Please select only countries.", type = "error")
         return(NULL)
       }
-        # OPTIMIZADO: get_group_data() en lugar de readRDS()
-        data_key <- if (group0 == "social") groupE else group0
-        df <- get_group_data(data_key)
-        if (is.null(df)) {
-          showNotification("Data not available.", type = "error")
-          return(NULL)
-        }
-        df <- df %>%
-          filter(
-            wage %in% wage_filter,
-            country %in% ns_variables$country_sel
-          ) %>%
-          apply_wage_panels() %>%
-          select(country, min_max_total, value) %>%
-          mutate(
-            type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
-          )
-          
+      # OPTIMIZADO: get_group_data() en lugar de readRDS()
+      data_key <- if (group0 == "social") groupE else group0
+      df <- get_group_data(data_key)
+      if (is.null(df)) {
+        showNotification("Data not available.", type = "error")
+        return(NULL)
+      }
+      df <- df %>%
+        filter(
+          wage %in% wage_filter,
+          country %in% ns_variables$country_sel
+        ) %>%
+        apply_wage_panels() %>%
+        select(country, min_max_total, value) %>%
+        mutate(
+          type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
+        )
+      
+      
+      if (nrow(df) == 0) {
+        showNotification("No Data for this combination.", type = "error")
+        return(NULL)
+      }
+      
+      
+      df_wide=df %>%
+        group_by(country) %>%
+        summarize(
+          t_min = min(value, na.rm = TRUE),
+          t_max = max(value, na.rm = TRUE)
+        )%>%
+        arrange(t_min) %>%
+        mutate(country = factor(country, levels = country))
+      
+      df_mm <- df_wide %>%
+        tidyr::pivot_longer(
+          cols = c(t_min, t_max),
+          names_to = "Scenario",
+          values_to = "value"
+        ) %>%
+        mutate(
+          Scenario = ifelse(Scenario == "t_min", "Min", "Max"),
+          Scenario = factor(Scenario, levels = c("Min", "Max")),
+          country  = factor(country, levels = panel_order())
+        )
+      
+      ns_variables$df_final=df_mm
+      
+      paises <- unique(df_mm$country)
+      plot_list <- list()
+      
+      for (i in seq_along(paises)) {
         
-        if (nrow(df) == 0) {
-          showNotification("No Data for this combination.", type = "error")
-          return(NULL)
-        }
+        pais <- paises[i]
+        data_pais <- df_mm %>% filter(country == pais)
         
-        
-        df_wide=df %>%
-          group_by(country) %>%
-          summarize(
-            t_min = min(value, na.rm = TRUE),
-            t_max = max(value, na.rm = TRUE)
-          )%>%
-          arrange(t_min) %>%
-          mutate(country = factor(country, levels = country))
-        
-        df_mm <- df_wide %>%
-          tidyr::pivot_longer(
-            cols = c(t_min, t_max),
-            names_to = "Scenario",
-            values_to = "value"
-          ) %>%
-          mutate(
-            Scenario = ifelse(Scenario == "t_min", "Min", "Max"),
-            Scenario = factor(Scenario, levels = c("Min", "Max")),
-            country  = factor(country, levels = panel_order())
-          )
-        
-        ns_variables$df_final=df_mm
-        
-        paises <- unique(df_mm$country)
-        plot_list <- list()
-        
-        for (i in seq_along(paises)) {
-          
-          pais <- paises[i]
-          data_pais <- df_mm %>% filter(country == pais)
-          
-          p <- plot_ly(
-            data = data_pais,
-            x = ~Scenario,
-            y = ~value,
-            type = "bar",
-            color = ~Scenario,
-            colors = c("Min" = "#00C1FF", "Max" = "#002244"),
-            showlegend = FALSE
-          ) %>%
-            layout(
-              barmode = "stack",   
-              
-              paper_bgcolor = "rgba(0,0,0,0)",
-              plot_bgcolor  = "rgba(0,0,0,0)",
-              
-              xaxis = list(
-                title = pais,
-                showgrid = FALSE,
-                zeroline = FALSE,
-                showline = FALSE,
-                tickangle = 90
-              ),
-              
-              yaxis = list(
-                title = ifelse(i == 1, y_axis_title, ""),
-                showgrid = FALSE,
-                zeroline = FALSE,
-                showline = FALSE
-              )
-            )
-          
-          plot_list[[i]] <- p
-        }
-        
-        fig <- subplot(
-          plot_list,
-          nrows = 1,
-          shareY = TRUE,
-          titleX = TRUE,
-          widths = rep(1 / length(plot_list), length(plot_list)),
-          margin = 0.01
+        p <- plot_ly(
+          data = data_pais,
+          x = ~Scenario,
+          y = ~value,
+          type = "bar",
+          color = ~Scenario,
+          colors = c("Min" = "#00C1FF", "Max" = "#002244"),
+          showlegend = FALSE
         ) %>%
           layout(
-            margin = list(l = 70, r = 30, b = 110, t = 20),
+            barmode = "stack",   
+            
             paper_bgcolor = "rgba(0,0,0,0)",
-            plot_bgcolor  = "rgba(0,0,0,0)"
+            plot_bgcolor  = "rgba(0,0,0,0)",
+            
+            xaxis = list(
+              title = pais,
+              showgrid = FALSE,
+              zeroline = FALSE,
+              showline = FALSE,
+              tickangle = 90
+            ),
+            
+            yaxis = list(
+              title = ifelse(i == 1, y_axis_title, ""),
+              showgrid = FALSE,
+              zeroline = FALSE,
+              showline = FALSE
+            )
           )
         
-        return(apply_plot_font(fig))
+        plot_list[[i]] <- p
+      }
+      
+      fig <- subplot(
+        plot_list,
+        nrows = 1,
+        shareY = TRUE,
+        titleX = TRUE,
+        widths = rep(1 / length(plot_list), length(plot_list)),
+        margin = 0.01
+      ) %>%
+        layout(
+          margin = list(l = 70, r = 30, b = 110, t = 20),
+          paper_bgcolor = "rgba(0,0,0,0)",
+          plot_bgcolor  = "rgba(0,0,0,0)"
+        )
+      
+      return(apply_plot_font(fig))
     }
     
     # ---- bonuses and benefits and Components ----
@@ -2581,22 +2796,22 @@ labor_server <- function(input, output, session) {
         } else if (!is.null(input$component_type) &&
                    length(input$component_type) > 0 &&
                    identical(input$component_type, "Total")){
-            # OPTIMIZADO: get_group_data() en lugar de readRDS()
-            df <- get_group_data(groupC)
-            if (is.null(df)) {
-              showNotification("Data not available.", type = "error")
-              return(NULL)
-            }
-            df <- df %>%
-              filter(
-                wage %in% wage_filter
-              ) %>%
-              apply_wage_panels() %>%
-              select(country, min_max_total, value) %>%
-              mutate(
-                type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
-              )
-            ns_variables$countries=c("All",unique(df$country))
+          # OPTIMIZADO: get_group_data() en lugar de readRDS()
+          df <- get_group_data(groupC)
+          if (is.null(df)) {
+            showNotification("Data not available.", type = "error")
+            return(NULL)
+          }
+          df <- df %>%
+            filter(
+              wage %in% wage_filter
+            ) %>%
+            apply_wage_panels() %>%
+            select(country, min_max_total, value) %>%
+            mutate(
+              type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
+            )
+          ns_variables$countries=c("All",unique(df$country))
         }
         
         if (is.null(df) || nrow(df) == 0) {
@@ -2724,22 +2939,22 @@ labor_server <- function(input, output, session) {
         } else if (!is.null(input$component_type) &&
                    length(input$component_type) > 0 &&
                    identical(input$component_type, "Total")){
-            # OPTIMIZADO
-            df <- get_group_data(groupC)
-            if (is.null(df)) {
-              showNotification("Data not available.", type = "error")
-              return(NULL)
-            }
-            df <- df %>%
-              filter(
-                wage %in% wage_filter,
-                country==ns_variables$country_sel
-              ) %>%
-              apply_wage_panels() %>%
-              select(country, min_max_total, value) %>%
-              mutate(
-                type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
-              )
+          # OPTIMIZADO
+          df <- get_group_data(groupC)
+          if (is.null(df)) {
+            showNotification("Data not available.", type = "error")
+            return(NULL)
+          }
+          df <- df %>%
+            filter(
+              wage %in% wage_filter,
+              country==ns_variables$country_sel
+            ) %>%
+            apply_wage_panels() %>%
+            select(country, min_max_total, value) %>%
+            mutate(
+              type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
+            )
         }
         if (is.null(df) || nrow(df) == 0) {
           showNotification("No Data for this combination.", type = "error")
@@ -2875,22 +3090,22 @@ labor_server <- function(input, output, session) {
       } else if (!is.null(input$component_type) &&
                  length(input$component_type) > 0 &&
                  identical(input$component_type, "Total")){
-          # OPTIMIZADO
-          df <- get_group_data(groupC)
-          if (is.null(df)) {
-            showNotification("Data not available.", type = "error")
-            return(NULL)
-          }
-          df <- df %>%
-            filter(
-              wage %in% wage_filter,
-              country %in% ns_variables$country_sel
-            ) %>%
-            apply_wage_panels() %>%
-            select(country, min_max_total, value) %>%
-            mutate(
-              type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
-            )
+        # OPTIMIZADO
+        df <- get_group_data(groupC)
+        if (is.null(df)) {
+          showNotification("Data not available.", type = "error")
+          return(NULL)
+        }
+        df <- df %>%
+          filter(
+            wage %in% wage_filter,
+            country %in% ns_variables$country_sel
+          ) %>%
+          apply_wage_panels() %>%
+          select(country, min_max_total, value) %>%
+          mutate(
+            type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
+          )
       }
       if (is.null(df) || nrow(df) == 0) {
         showNotification("No Data for this combination.", type = "error")
@@ -2992,9 +3207,11 @@ labor_server <- function(input, output, session) {
   # ============================================================================
   
   output$tabla_detalle<-reactable::renderReactable({
+    # Show loading message
+    
     table_visible(FALSE)
     ns_variables$df_final_tabla <- NULL
-
+    
     groupA <- safe_value(selected_groupA(), "total")
     groupC <- safe_value(selected_groupC(), "all_component")
     groupD <- safe_value(selected_groupD(), "all_bonuses")
@@ -3102,42 +3319,42 @@ labor_server <- function(input, output, session) {
           ns_variables$df_final_tabla=data
         }
       }
-    
-    if (is.null(data)) {
-      return()
-    }
-    table_visible(TRUE)
-    
-    reactable::reactable(
-      data,
       
-      # Estilo general aplicado a todas las columnas
-      defaultColDef = reactable::colDef(
-        html = TRUE,
-        minWidth = 140,
-        maxWidth = 260,
-        align = "left",
-        style = list(
-          whiteSpace = "normal",
-          lineHeight = "1.35",
-          fontSize = "12px",
-          padding = "6px",
-          textAlign = "justify",
-          fontFamily = plotly_font_family
-        )
-      ),
-      theme = reactable::reactableTheme(
-        style = list(fontFamily = plotly_font_family),
-        headerStyle = list(fontFamily = plotly_font_family)
-      ),
-      bordered = TRUE,
-      striped = TRUE,
-      highlight = TRUE,
-      resizable = TRUE,
-      defaultPageSize = 8
-    )
-    
-} 
+      if (is.null(data)) {
+        return()
+      }
+      table_visible(TRUE)
+      
+      reactable::reactable(
+        data,
+        
+        # Estilo general aplicado a todas las columnas
+        defaultColDef = reactable::colDef(
+          html = TRUE,
+          minWidth = 140,
+          maxWidth = 260,
+          align = "left",
+          style = list(
+            whiteSpace = "normal",
+            lineHeight = "1.35",
+            fontSize = "12px",
+            padding = "6px",
+            textAlign = "justify",
+            fontFamily = plotly_font_family
+          )
+        ),
+        theme = reactable::reactableTheme(
+          style = list(fontFamily = plotly_font_family),
+          headerStyle = list(fontFamily = plotly_font_family)
+        ),
+        bordered = TRUE,
+        striped = TRUE,
+        highlight = TRUE,
+        resizable = TRUE,
+        defaultPageSize = 8
+      )
+      
+    } 
     
   })
   
@@ -3145,7 +3362,7 @@ labor_server <- function(input, output, session) {
     if (!option1_selected()) {
       return(div(style = "display:none;"))
     }
-
+    
     group0 <- selected_group0()
     valid_choices <- option2_choices_for_group(group0)
     if (group0 == "social" &&
@@ -3160,20 +3377,20 @@ labor_server <- function(input, output, session) {
       "padding: 6px 18px;",
       "font-weight: 600;"
     )
-
+    
     option_button <- function(id, label, value, title) {
       btn_class <- if (identical(selected_groupA(), value)) {
         "pill-button subcomponent-btn active"
       } else {
         "pill-button subcomponent-btn"
       }
-
+      
       tags$div(
         style = "display: flex; flex-direction: column; gap: 4px;",
         actionButton(ns(id), label, class = btn_class, title = title, style = button_style)
       )
     }
-
+    
     tags$div(
       class = "option2-group",
       style = "display: flex; flex-direction: column; gap: 8px;",
@@ -3313,7 +3530,7 @@ labor_server <- function(input, output, session) {
     },
     contentType = "text/csv"
   )
-
+  
   output$download_table_ui <- renderUI({
     if (!table_visible()) {
       return(NULL)

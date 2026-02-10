@@ -300,15 +300,183 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
   
   plot_footer_annotations <- function() {
     access_date <- format(Sys.Date(), "%Y-%m-%d")
-    list(
+    mode <- safe_value(input$compare_mode, "country")
+    is_cross_country <- identical(mode, "country")
+    group0 <- safe_value(selected_group0(), "all")
+    groupA <- safe_value(selected_groupA(), "total")
+    groupD <- safe_value(selected_groupD(), "all_bonuses")
+    groupE <- safe_value(selected_groupE(), "pensions")
+    tenure_suffix <- ""
+    if (!is_cross_country && tenure_enabled()) {
+      tenure_suffix <- " and tenure (in years)"
+    }
+
+    country_label <- "the selected country"
+    if (!is_cross_country) {
+      country_sel <- ns_variables$country_sel
+      if (!is.null(country_sel) && length(country_sel) > 0 && !"All" %in% country_sel) {
+        country_label <- country_display_name(country_sel[1])
+      } else if (!is.null(country_sel) && length(country_sel) > 1 && !"All" %in% country_sel) {
+        country_label <- "selected countries"
+      }
+    }
+    location_suffix <- if (is_cross_country) "" else paste0(" in ", country_label)
+    wage_clause <- paste0("by wage level", tenure_suffix, location_suffix)
+
+    us_clause <- "US denotes the simple average across the states of New York, California, Texas, and Florida."
+    shared_costs_clause <- paste(
+      "These costs are shared between employers and employees and include mandatory contributions for pensions,",
+      "health insurance, occupational risk coverage, payroll taxes, and legally required bonuses and benefits."
+    )
+    shared_short_clause <- "These costs are shared between employers and employees."
+    paid_exclusively_employers <- "This component is paid exclusively by employers."
+    paid_exclusively_employer <- "This component is paid exclusively by employer."
+    non_quantifiable_clause <- paste(
+      "Non-quantifiable non-wage benefits include profit sharing bonuses (Chile, Dominican Republic, Ecuador,",
+      "Mexico, Peru, Bolivia), family allowances/subsidies (Bolivia, Colombia), transport subsidies (Brazil),",
+      "and relocation expenses (Ecuador)."
+    )
+
+    note_text <- ""
+    note_sentences <- character(0)
+    plot_output_id <- ns("plot")
+    plot_width_px <- session$clientData[[paste0("output_", plot_output_id, "_width")]]
+    if (is.null(plot_width_px) || !is.finite(plot_width_px)) {
+      plot_width_px <- 900
+    }
+    note_width_px <- max(360, plot_width_px - 20)
+    avg_char_px <- 5.0
+    note_wrap_width <- floor(note_width_px / avg_char_px)
+    note_wrap_width <- max(90, min(note_wrap_width, 260))
+    if (group0 == "all") {
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum non-wage labor costs as a percentage of wages for formal employees ",
+          wage_clause,
+          "."
+        ),
+        shared_costs_clause
+      )
+      if (is_cross_country) {
+        note_sentences <- c(note_sentences, us_clause)
+      }
+    } else if (group0 == "bonuses_and_benefits") {
+      if (groupA == "component" && groupD %in% c("ab", "pl", "up", "ob")) {
+        component_label <- switch(
+          groupD,
+          ab = "annual and other periodic bonuses",
+          pl = "paid leave",
+          up = "unemployment protection",
+          ob = "other bonuses and benefits",
+          "bonuses and benefits"
+        )
+        payer_clause <- if (groupD == "pl" && is_cross_country) {
+          paid_exclusively_employer
+        } else {
+          paid_exclusively_employers
+        }
+        note_sentences <- c(
+          paste0(
+            "Note: Bars show the statutory minimum and maximum cost of legally mandated ",
+            component_label,
+            " as a percentage of wages for formal employees ",
+            wage_clause,
+            "."
+          ),
+          payer_clause
+        )
+        if (is_cross_country) {
+          note_sentences <- c(note_sentences, us_clause)
+        }
+      } else {
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum cost of legally mandated bonuses and benefits as a percentage of wages for formal employees ",
+          wage_clause,
+            "."
+          ),
+          paid_exclusively_employers
+        )
+        if (is_cross_country) {
+          note_sentences <- c(note_sentences, non_quantifiable_clause, us_clause)
+        }
+      }
+    } else if (group0 == "social") {
+      component_label <- switch(
+        groupE,
+        pensions = "pension contributions",
+        health = "health contributions",
+        occupational_risk = "occupational risk contributions",
+        "social security contributions"
+      )
+      payer_clause <- if (groupE == "occupational_risk") {
+        paid_exclusively_employers
+      } else {
+        shared_short_clause
+      }
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum ",
+          component_label,
+          " as a percentage of wages for formal employees ",
+          wage_clause,
+          "."
+        ),
+        payer_clause
+      )
+      if (is_cross_country) {
+        note_sentences <- c(note_sentences, us_clause)
+      }
+    } else if (group0 == "payroll_taxes") {
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum payroll taxes as a percentage of wages for formal employees ",
+          wage_clause,
+          "."
+        ),
+        shared_short_clause
+      )
+      if (is_cross_country) {
+        note_sentences <- c(note_sentences, us_clause)
+      }
+    } else {
+      note_sentences <- c(
+        paste0(
+          "Note: Bars show the statutory minimum and maximum non-wage labor costs as a percentage of wages for formal employees ",
+          wage_clause,
+          "."
+        )
+      )
+      if (is_cross_country) {
+        note_sentences <- c(note_sentences, us_clause)
+      }
+    }
+
+    note_text <- paste(note_sentences, collapse = " ")
+    note_lines <- strwrap(note_text, width = note_wrap_width)
+    if (length(note_lines) == 0) {
+      note_lines <- ""
+    }
+    note_text <- paste(note_lines, collapse = "<br>")
+    note_line_count <- length(note_lines)
+    line_height_px <- 14
+    note_yshift <- -100
+    source_padding_px <- 10
+    source_yshift <- note_yshift - (line_height_px * note_line_count) - source_padding_px
+    margin_b <- max(240, abs(source_yshift) + line_height_px + 40)
+
+    annotations <- list(
       list(
-        text = "Note: TBD",
+        text = note_text,
         xref = "paper",
         yref = "paper",
         x = 0,
-        y = -0.34,
+        y = 0,
         xanchor = "left",
         yanchor = "top",
+        align = "left",
+        yshift = note_yshift,
+        width = note_width_px,
         showarrow = FALSE,
         font = list(family = plotly_font_family, size = 10)
       ),
@@ -320,13 +488,17 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         xref = "paper",
         yref = "paper",
         x = 0,
-        y = -0.42,
+        y = 0,
         xanchor = "left",
         yanchor = "top",
+        align = "left",
+        yshift = source_yshift,
         showarrow = FALSE,
         font = list(family = plotly_font_family, size = 10)
       )
     )
+    attr(annotations, "margin_b") <- margin_b
+    annotations
   }
   
   apply_labor_plot_theme <- function(fig) {
@@ -339,6 +511,11 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         traces = idx
       )
     }
+    annotations <- plot_footer_annotations()
+    margin_b <- attr(annotations, "margin_b")
+    if (is.null(margin_b) || is.na(margin_b)) {
+      margin_b <- 230
+    }
     fig %>%
       layout(
         font = list(family = plotly_font_family),
@@ -347,8 +524,8 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
           x = 0.5,
           xanchor = "center"
         ),
-        annotations = plot_footer_annotations(),
-        margin = list(t = 60, b = 200)
+        annotations = annotations,
+        margin = list(t = 60, b = margin_b)
       )
   }
 

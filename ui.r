@@ -12,7 +12,7 @@ source("tabs/ui/forthcoming.R", local = TRUE)
 # ============================
 
 shinyUI(
-    fluidPage(
+  fluidPage(
     shinyjs::useShinyjs(),
     
     # ---- HEAD ----
@@ -25,10 +25,80 @@ shinyUI(
       includeCSS("www/styles.css"),
       includeCSS("www/labor.css"),
       
+      # ---- CSS + JS FOR LOADING MESSAGES ON OUTPUTS ----
+      tags$style(HTML("
+        /* Loading message box */
+        .output-loading-msg {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          gap: 14px;
+          padding: 48px 20px;
+          width: 100%;
+          background: rgba(255,255,255,0.95);
+          border-radius: 8px;
+        }
+        .output-loading-msg.is-visible {
+          display: flex !important;
+        }
+        .output-loading-msg .ld-dots {
+          display: inline-flex;
+          gap: 6px;
+        }
+        .output-loading-msg .ld-dots span {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background-color: #00C1FF;
+          animation: ldBounce 1.2s ease-in-out infinite;
+        }
+        .output-loading-msg .ld-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .output-loading-msg .ld-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes ldBounce {
+          0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+          40% { opacity: 1; transform: scale(1.2); }
+        }
+        .output-loading-msg .ld-text {
+          font-size: 15px;
+          font-weight: 500;
+          color: #1e3a5f;
+          font-family: 'National Park', sans-serif;
+        }
+      ")),
+      
+      # JS that listens for Shiny recalculating/idle events on ANY output.
+      # Works even when the outputs are created dynamically inside renderUI.
+      tags$script(HTML("
+        $(document).on('shiny:recalculating', function(e) {
+          var id = e.target.id || '';
+          // Match the plot and table outputs (namespaced as labor-plot, labor-tabla_detalle)
+          if (id.indexOf('-plot') !== -1) {
+            var msg = document.getElementById(id.replace('-plot', '-loading_plot_msg'));
+            if (msg) msg.classList.add('is-visible');
+          }
+          if (id.indexOf('-tabla_detalle') !== -1) {
+            var msg = document.getElementById(id.replace('-tabla_detalle', '-loading_table_msg'));
+            if (msg) msg.classList.add('is-visible');
+          }
+        });
+
+        $(document).on('shiny:value shiny:error', function(e) {
+          var id = e.target.id || '';
+          if (id.indexOf('-plot') !== -1) {
+            var msg = document.getElementById(id.replace('-plot', '-loading_plot_msg'));
+            if (msg) msg.classList.remove('is-visible');
+          }
+          if (id.indexOf('-tabla_detalle') !== -1) {
+            var msg = document.getElementById(id.replace('-tabla_detalle', '-loading_table_msg'));
+            if (msg) msg.classList.remove('is-visible');
+          }
+        });
+      ")),
+      
       # ---- JAVASCRIPT TO CONTROL TABS ----
       tags$script(HTML("
         Shiny.addCustomMessageHandler('trigger-download', function(id) {
-          const el = document.getElementById(id);
+          var el = document.getElementById(id);
           if (el) el.click();
         });
       ")),
@@ -43,7 +113,7 @@ shinyUI(
           });
           
           // Add active class to the current tab
-          const activeLink = document.querySelector('.nav-link[data-tab=\"' + activeTab + '\"]');
+          var activeLink = document.querySelector('.nav-link[data-tab=\"' + activeTab + '\"]');
           if (activeLink) {
             activeLink.classList.add('active');
           }
@@ -58,13 +128,13 @@ shinyUI(
             e.preventDefault();
     
             // Get the tab name from data-tab attribute
-            let tab = this.getAttribute('data-tab');
+            var tab = this.getAttribute('data-tab');
     
             // Update active state immediately
             updateActiveNav(tab);
     
             // Find the hidden Shiny tab button that matches this name
-            let tabButton = document.querySelector(
+            var tabButton = document.querySelector(
               'a[data-value=\"' + tab + '\"]'
             );
     
@@ -76,13 +146,13 @@ shinyUI(
         });
     
         // Listen for tab changes (in case tabs are changed programmatically)
-        const observer = new MutationObserver(function(mutations) {
+        var observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutation) {
             if (mutation.attributeName === 'class') {
-              const tabs = document.querySelectorAll('#main_tabs > .tab-pane');
+              var tabs = document.querySelectorAll('#main_tabs > .tab-pane');
               tabs.forEach(function(tab) {
                 if (tab.classList.contains('active')) {
-                  const tabValue = tab.getAttribute('data-value');
+                  var tabValue = tab.getAttribute('data-value');
                   if (tabValue) {
                     updateActiveNav(tabValue);
                   }
@@ -93,7 +163,7 @@ shinyUI(
         });
     
         // Observe tab changes
-        const tabPanes = document.querySelectorAll('#main_tabs > .tab-pane');
+        var tabPanes = document.querySelectorAll('#main_tabs > .tab-pane');
         tabPanes.forEach(function(pane) {
           observer.observe(pane, { attributes: true });
         });
@@ -102,22 +172,22 @@ shinyUI(
     ")),
       tags$script(HTML("
       document.addEventListener('DOMContentLoaded', function() {
-        const TAB_PARAM = 'tab';
-        const tabContainer = document.getElementById('main_tabs');
-        let isHistoryNav = false;
-        let currentTab = null;
+        var TAB_PARAM = 'tab';
+        var tabContainer = document.getElementById('main_tabs');
+        var isHistoryNav = false;
+        var currentTab = null;
 
         function getActiveTab() {
           if (!tabContainer) return null;
-          const active = tabContainer.querySelector('.tab-pane.active');
+          var active = tabContainer.querySelector('.tab-pane.active');
           return active ? active.getAttribute('data-value') : null;
         }
 
         function syncUrl(tab, replace) {
           if (!tab) return;
-          const url = new URL(window.location);
+          var url = new URL(window.location);
           url.searchParams.set(TAB_PARAM, tab);
-          const method = replace ? 'replaceState' : 'pushState';
+          var method = replace ? 'replaceState' : 'pushState';
           window.history[method]({ tab: tab }, '', url);
         }
 
@@ -128,17 +198,17 @@ shinyUI(
             if (fromPop) isHistoryNav = false;
             return;
           }
-          const btn = document.querySelector('a[data-value=\"' + tab + '\"]');
+          var btn = document.querySelector('a[data-value=\"' + tab + '\"]');
           if (btn) btn.click();
         }
 
         // Hook Bootstrap tab events (Shiny uses BS tabs under the hood)
         if (window.jQuery) {
           window.jQuery(document).on('shown.bs.tab', 'a[data-toggle=\"tab\"]', function(e) {
-            const tab = window.jQuery(e.target).data('value');
+            var tab = window.jQuery(e.target).data('value');
             if (!tab) return;
             if (isHistoryNav) {
-              syncUrl(tab, true); // keep URL in sync without adding history on back/forward
+              syncUrl(tab, true);
               isHistoryNav = false;
             } else if (tab !== currentTab) {
               syncUrl(tab, false);
@@ -148,8 +218,8 @@ shinyUI(
         }
 
         if (tabContainer) {
-          const observer = new MutationObserver(function() {
-            const tab = getActiveTab();
+          var observer = new MutationObserver(function() {
+            var tab = getActiveTab();
             if (!tab) return;
             if (tab === currentTab) {
               if (isHistoryNav) isHistoryNav = false;
@@ -168,7 +238,7 @@ shinyUI(
           });
         }
 
-        const initialTab = new URL(window.location).searchParams.get(TAB_PARAM) || getActiveTab() || 'landing';
+        var initialTab = new URL(window.location).searchParams.get(TAB_PARAM) || getActiveTab() || 'landing';
         syncUrl(initialTab, true);
         isHistoryNav = true;
         switchToTab(initialTab, true);
@@ -176,8 +246,8 @@ shinyUI(
         currentTab = initialTab;
 
         window.addEventListener('popstate', function(event) {
-          const tabFromState = event.state && event.state.tab;
-          const tabFromUrl = new URL(window.location).searchParams.get(TAB_PARAM);
+          var tabFromState = event.state && event.state.tab;
+          var tabFromUrl = new URL(window.location).searchParams.get(TAB_PARAM);
           switchToTab(tabFromState || tabFromUrl || 'landing', true);
         });
       });
@@ -185,8 +255,8 @@ shinyUI(
     ),
     tags$script(HTML("
   document.addEventListener('DOMContentLoaded', function () {
-    const btn = document.querySelector('.hamburger-btn');
-    const menu = document.querySelector('.hamburger-dropdown');
+    var btn = document.querySelector('.hamburger-btn');
+    var menu = document.querySelector('.hamburger-dropdown');
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -199,7 +269,7 @@ shinyUI(
   });
 ")),
     
-
+    
     # ---- HEADER ----
     tags$div(
       class = "header",
@@ -214,20 +284,18 @@ shinyUI(
           onclick = "document.querySelector('a[data-value=\"landing\"]').click();"
         ),
         
-        # Spacer (centro) — mantiene alineación del grid
+        # Spacer (centro)
         tags$div(),
         
         # Hamburger (derecha)
         tags$div(
           class = "hamburger-menu",
           
-          # Botón ☰
           tags$div(
             class = "hamburger-btn",
-            HTML("&#9776;")  # ☰
+            HTML("&#9776;")
           ),
           
-          # Dropdown
           tags$div(
             class = "hamburger-dropdown hidden",
             
@@ -267,50 +335,36 @@ shinyUI(
         tabPanel(
           "landing",
           tags$div(
-            class = "landing-container", # Nuevo contenedor global
+            class = "landing-container",
             
-            # --- 1. COLUMNA IZQUIERDA: IMAGEN ---
             tags$div(
               class = "landing-left-col",
-              tags$div(class = "landing-image-box") # La imagen va por CSS
+              tags$div(class = "landing-image-box")
             ),
             
-            # --- 2. COLUMNA DERECHA: CONTENIDO ---
             tags$div(
               class = "landing-right-col",
               
-              # A. ENCABEZADO (Welcome + Título)
               tags$div(
                 class = "landing-header-row",
-                tags$div(class = "landing-eyebrow", "WELCOME TO THE"),
-                tags$div(class = "landing-title", h1("Regulatory Frameworks Explorer"))
+                tags$div(class = "landing-eyebrow", "WELCOME TO "),
+                tags$div(class = "landing-title", h1("The Market and Social Protection Regulatory Frameworks Explorer"))
               ),
               
-              # B. DESCRIPCIÓN (Indentada visualmente)
               tags$div(
                 class = "landing-desc-row",
-                p("Explore comprehensive data on ",
-                  tags$a(
-                    href = "#",
-                    class = "link-blue",
-                    onclick = "Shiny.setInputValue('topic_selected', 'labor', {priority: 'event'}); return false;",
-                    "non-salary labor costs"
-                  ),
-                  " across Latin American countries. Dive into interactive visualizations and detailed analyses to understand regional regulatory frameworks."
+                p("Explore a comprehensive inventory on non-salary labor costs in eleven Latin American countries. Dive into the regulations using interactive visualizations to understand their regional frameworks."
                 )
               ),
               
-              # C. WIDGET (El bloque complejo)
               tags$div(
                 class = "landing-widget-grid",
                 
-                # Elemento 1: Icono
                 tags$div(
                   class = "widget-icon",
                   tags$img(src = "Flecha.png")
                 ),
                 
-                # Elemento 2: Tarjeta (400x262)
                 tags$a(
                   class = "widget-card",
                   href = "#",
@@ -319,7 +373,6 @@ shinyUI(
                   p("Social security and insurance contributions, labor taxes and other costs related to employing.")
                 ),
                 
-                # Elemento 3: Botón Explore
                 tags$a(
                   class = "widget-btn",
                   href = "#",
@@ -330,13 +383,8 @@ shinyUI(
             )
           ),
           
-          # Footer fuera del grid principal
           tags$div(class = "footer", tags$p("© 2026 World Bank Group"))
         ),
-        # # ============================
-        # # 2. Guide (is not yet needed)
-        # # ============================
-        # tabPanel("Guide", guide), 
         
         # ============================
         # 3. About
@@ -344,11 +392,7 @@ shinyUI(
         tabPanel(
           "About", about
         ),
-        # # En la sección de tabsetPanel, después de "About"
-        # tabPanel(
-        #   "forthcoming",
-        #   forthcoming
-        # ),
+        
         # ============================
         # 4. CONTENT MODULE PAGE
         # ============================

@@ -100,7 +100,7 @@ labor_choice_cards_ui <- function(ns, active_view = NULL) {
         ns("choose_across"),
         label = tagList(
           tags$span(class = "labor-choice-dot"),
-          tags$span(class = "labor-choice-title", "CROSS COUNTRY VIEW"),
+          tags$span(class = "labor-choice-title", "CROSS-COUNTRY VIEW"),
           tags$span(
             class = "labor-choice-desc",
             "Compare non-salary labor costs across countries at a selected minimum wage level"

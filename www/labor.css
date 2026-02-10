@@ -41,38 +41,44 @@
 }
 
 .plot-spinner .shiny-bound-output.recalculating {
-  position: relative;
-  opacity: 0.6;
+  opacity: 0.4;
 }
 
-.plot-spinner .shiny-bound-output.recalculating:before {
-  content: "";
+/* ── Loading overlay + message ──
+   Applied to the PARENT wrapper via :has() so the ::before/::after
+   render above the plotly SVG (child pseudo-elements get hidden behind it).
+   ──────────────────────────────────────────────── */
+.plot-spinner {
+  position: relative;
+}
+
+.plot-spinner:has(.recalculating)::before {
+  content: '';
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.6);
-  z-index: 10;
+  background: rgba(255, 255, 255, 0.75);
+  z-index: 999;
+  border-radius: 4px;
+  pointer-events: none;
 }
 
-.plot-spinner .shiny-bound-output.recalculating:after {
-  content: "";
+.plot-spinner:has(.recalculating)::after {
+  content: 'Loading chart, please wait...';
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 32px;
-  height: 32px;
-  margin-top: -16px;
-  margin-left: -16px;
-  border-radius: 50%;
-  border: 3px solid #cfd8dc;
-  border-top-color: #00C1FF;
-  animation: spinner-rotate 0.8s linear infinite;
-  z-index: 11;
-}
-
-@keyframes spinner-rotate {
-  to {
-    transform: rotate(360deg);
-  }
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e3a5f;
+  font-family: 'National Park', sans-serif;
+  background: #ffffff;
+  padding: 16px 32px;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 34, 68, 0.15);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {

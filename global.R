@@ -12,6 +12,7 @@ library(plotly)
 library(reactable)
 library(readxl)
 library(shinyjs)
+library(shinycssloaders)
 
 # -----------------------------------------------------------------------------
 # 1. DATOS PRINCIPALES (RDS)
