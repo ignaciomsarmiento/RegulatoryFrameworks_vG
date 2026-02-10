@@ -93,7 +93,7 @@ labor_choice_cards_ui <- function(ns, active_view = NULL) {
   }
   tags$div(
     class = "labor-explore-by",
-    tags$span(class = "labor-explore-label", "EXPLORE BY"),
+    tags$span(class = "labor-explore-label", "2. Explore by:"),
     tags$div(
       class = "labor-choice-list",
       actionButton(
@@ -169,7 +169,7 @@ labor_common_filters_ui <- function(ns,
   if (is.null(country_section_ui)) {
     country_section_ui <- tags$div(
       style = "margin-top: 5px;",
-      tags$span("Country filters:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
+      tags$span("4. Country:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
       tags$p(
         country_help_text,
         style = "font-size: 12px; color: #555; margin: 0 0 6px 0;"
@@ -179,6 +179,7 @@ labor_common_filters_ui <- function(ns,
   }
   tagList(
     prepend_block,
+    tags$span("1. Categories:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
     tags$p(
       style = "font-size: 13px; line-height: 1.5; margin-bottom: 15px;",
       description_text
@@ -249,7 +250,7 @@ labor_common_filters_ui <- function(ns,
     ),
     tags$div(
       style = "display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;",
-      tags$span("Minimum Wage filters:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
+      tags$span("3. Minimum Wage:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
       tags$p(
         wage_help_text,
         style = "font-size: 12px; color: #555; margin: 0 0 4px 0;"
