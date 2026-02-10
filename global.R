@@ -278,7 +278,7 @@ PLOTLY_FONT_FAMILY <- "National Park, 'Source Sans Pro', -apple-system, BlinkMac
 
 COMPONENT_PALETTE <- c(
 
-"Pension" = "#00C1FF",
+"Pensions" = "#00C1FF",
 "Health" = "#002244",
 "Occupational Risk" = "#B9BAB5",
 "Bonuses and Benefits" = "#335B8E",
@@ -286,7 +286,7 @@ COMPONENT_PALETTE <- c(
 )
 
 COMPONENT_STACK_ORDER <- c(
-"Pension",
+"Pensions",
 "Health",
 "Occupational Risk",
 "Bonuses and Benefits",
@@ -295,7 +295,7 @@ COMPONENT_STACK_ORDER <- c(
 
 COMPONENT_LEGEND_ORDER <- c(
 "Bonuses and Benefits",
-"Pension",
+"Pensions",
 "Health",
 "Occupational Risk",
 "Payroll Taxes"

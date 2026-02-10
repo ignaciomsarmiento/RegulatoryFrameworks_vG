@@ -112,10 +112,10 @@ labor_choice_cards_ui <- function(ns, active_view = NULL) {
         ns("choose_within"),
         label = tagList(
           tags$span(class = "labor-choice-dot"),
-          tags$span(class = "labor-choice-title", "COUNTRY VIEW"),
+          tags$span(class = "labor-choice-title", "WITHIN-COUNTRY VIEW"),
           tags$span(
             class = "labor-choice-desc",
-            "Compare wage levels within a single country and explore how costs change by tenure"
+            "Compare wage levels within a single country and explore how costs change by tenure and minimum wage."
           )
         ),
         class = within_class
@@ -187,6 +187,7 @@ labor_common_filters_ui <- function(ns,
       class = "option1-group",
       style = "display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;",
       tags$div(
+        class = "labor-primary-buttons",
         style = "display: flex; flex-direction: column; gap: 8px;",
         tags$div(
           style = "display: flex; flex-direction: column; gap: 4px;",
@@ -216,9 +217,19 @@ labor_common_filters_ui <- function(ns,
             class = "pill-button",
             title = "Focus on social security contributions.",
             style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;"
+          ),
+          uiOutput(ns("component_buttons"))
+        ),
+        tags$div(
+          style = "display: flex; flex-direction: column; gap: 4px;",
+          actionButton(
+            ns("occupational_risk_main"),
+            "OCCUPATIONAL RISK",
+            class = "pill-button",
+            title = "Focus on occupational risk contributions.",
+            style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;"
           )
         ),
-        uiOutput(ns("component_buttons")),
         tags$div(
           style = "display: flex; flex-direction: column; gap: 4px;",
           actionButton(
@@ -266,7 +277,7 @@ non_salary_across_ui <- function(id, show_header = TRUE) {
     ),
     labor_common_filters_ui(
       ns,
-      description_text = "Use these filters to compare non salary labor costs across countries",
+      description_text = "Use these filters to compare non-salary labor costs across countries",
       wage_help_text = paste(
         "Hold the job constant and change only earnings:",
         "choose a multiple of the minimum wage (MW) to see how statutory costs scale with pay."

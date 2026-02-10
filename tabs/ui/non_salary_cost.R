@@ -137,9 +137,9 @@ labor_ui <- function(id) {
                # ----------------------------------------------------------
                # COLUMNA IZQUIERDA
                # ----------------------------------------------------------
-               column(
-                 width = 3,
-                 class = "left-panel",
+              column(
+                width = 3,
+                class = "left-panel",
                  # -------- FILTERS --------
                  tags$div(
                    style = "margin-bottom: 30px;",
@@ -176,17 +176,18 @@ labor_ui <- function(id) {
                      "Use these filters to compare non salary labor costs across countries"
                    ),
                    
-                   # ---- SUMMARY FILTER ----
-                   tags$div(
-                     class = "option1-group",
-                     style = "display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;",
-                     #tags$span("Option 1:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
-                     tags$div(
-                       style = "display: flex; flex-direction: column; gap: 8px;",
-                       tags$div(
-                         style = "display: flex; flex-direction: column; gap: 4px;",
-                         actionButton(ns("all"), "ALL",
-                                      class = "pill-button active",
+                    # ---- SUMMARY FILTER ----
+                    tags$div(
+                      class = "option1-group",
+                      style = "display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;",
+                      #tags$span("Option 1:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
+                      tags$div(
+                        class = "labor-primary-buttons",
+                        style = "display: flex; flex-direction: column; gap: 8px;",
+                        tags$div(
+                          style = "display: flex; flex-direction: column; gap: 4px;",
+                          actionButton(ns("all"), "ALL",
+                                       class = "pill-button active",
                                       title = "Show total non-salary costs across all components.",
                                       style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;")
                        ),
@@ -197,23 +198,30 @@ labor_ui <- function(id) {
                                       title = "Focus on bonuses and benefits costs.",
                                       style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;")
                        ),
-                       tags$div(
-                         style = "display: flex; flex-direction: column; gap: 4px;",
-                         actionButton(ns("social"), "SOCIAL SECURITY CONTRIBUTIONS",
-                                      class = "pill-button",
-                                      title = "Focus on social security contributions.",
-                                      style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;")
-                       ),
-                       uiOutput(ns("component_buttons")),
-                       tags$div(
-                         style = "display: flex; flex-direction: column; gap: 4px;",
-                         actionButton(ns("payroll"), "PAYROLL TAXES",
-                                      class = "pill-button",
-                                      title = "Focus on payroll tax costs.",
-                                      style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;")
-                       )
-                     )
-                   ),
+                        tags$div(
+                          style = "display: flex; flex-direction: column; gap: 4px;",
+                          actionButton(ns("social"), "SOCIAL SECURITY CONTRIBUTIONS",
+                                       class = "pill-button",
+                                       title = "Focus on social security contributions.",
+                                       style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;"),
+                          uiOutput(ns("component_buttons"))
+                        ),
+                        tags$div(
+                          style = "display: flex; flex-direction: column; gap: 4px;",
+                          actionButton(ns("occupational_risk_main"), "OCCUPATIONAL RISK",
+                                       class = "pill-button",
+                                       title = "Focus on occupational risk contributions.",
+                                       style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;")
+                        ),
+                        tags$div(
+                          style = "display: flex; flex-direction: column; gap: 4px;",
+                          actionButton(ns("payroll"), "PAYROLL TAXES",
+                                       class = "pill-button",
+                                       title = "Focus on payroll tax costs.",
+                                       style = "background-color: #e6f4ff; color: #0f3b66; border: 1px solid #0f3b66; border-radius: 20px; padding: 6px 18px; font-weight: 600;")
+                        )
+                      )
+                    ),
                    uiOutput(ns("option2_buttons")),
                    tags$div(
                      class = "component-wrapper-fixed",
@@ -264,9 +272,9 @@ labor_ui <- function(id) {
                # ----------------------------------------------------------
                # COLUMNA DERECHA
                # ----------------------------------------------------------
-               column(
-                 width = 9,
-                 class = "right-panel",
+              column(
+                width = 9,
+                class = "right-panel",
                  style = "padding-top: 34px;",
                  tags$hr(style = "border-top: 2px solid #00b8d4; margin-top: 0; margin-bottom: 14px;"),
                  

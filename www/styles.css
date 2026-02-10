@@ -1132,7 +1132,9 @@ body {
   display:flex;
   flex-direction:column;
   gap:6px;
-  min-width:200px;
+  min-width:0;
+  width:auto;
+  align-items:flex-start;
 }
 
 .component-wrapper-fixed {
@@ -1159,6 +1161,9 @@ body {
   line-height: 1.2 !important;
   border-radius: 12px !important;
   white-space: nowrap !important;
+  text-align: left;
+  width: auto;
+  align-self: flex-start;
 }
 
 

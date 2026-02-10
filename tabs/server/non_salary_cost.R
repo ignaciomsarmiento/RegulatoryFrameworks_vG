@@ -138,6 +138,45 @@ labor_server <- function(input, output, session) {
     }
     value
   }
+
+  exclude_health_countries <- function(df) {
+    if (is.null(df) || nrow(df) == 0 || !"country" %in% names(df)) {
+      return(df)
+    }
+    mode <- safe_value(input$compare_mode, "country")
+    group0 <- safe_value(selected_group0(), "all")
+    groupE <- safe_value(selected_groupE(), "pensions")
+    if (identical(mode, "country") && group0 == "social" && groupE == "health") {
+      df <- df %>% dplyr::filter(!country %in% c("US", "BRA", "ESP"))
+    }
+    df
+  }
+
+  get_group_data <- function(group_name) {
+    df <- NULL
+    if (exists("DATA_BY_GROUP", inherits = TRUE)) {
+      df <- DATA_BY_GROUP[[group_name]]
+    }
+    exclude_health_countries(df)
+  }
+
+  get_payer_data <- function(payer_name) {
+    df <- NULL
+    if (exists("DATA_BY_PAYER", inherits = TRUE)) {
+      df <- DATA_BY_PAYER[[payer_name]]
+    } else {
+      payer_paths <- list(
+        pensions = "data/non_salary/pensions_payer.rds",
+        health = "data/non_salary/health_payer.rds",
+        payroll_taxes = "data/non_salary/payroll_taxes_payer.rds"
+      )
+      path <- payer_paths[[payer_name]]
+      if (!is.null(path)) {
+        df <- tryCatch(readRDS(path), error = function(e) NULL)
+      }
+    }
+    exclude_health_countries(df)
+  }
   
   # ---- Helper: countries that have data for the current selection ----
   get_active_countries <- function(group0, groupE) {
@@ -196,7 +235,7 @@ labor_server <- function(input, output, session) {
       bonuses_and_benefits = "Bonuses and benefits",
       social = switch(
         groupE,
-        pensions = "Pension contributions",
+        pensions = "Pensions contributions",
         health = "Health contributions",
         occupational_risk = "Occupational risk contributions",
         "Social security contributions"
@@ -209,7 +248,7 @@ labor_server <- function(input, output, session) {
       subject <- switch(
         groupD,
         all_bonuses = "Bonuses and benefits",
-        ab = "Annual and other bonuses",
+        ab = "Annual and other periodic bonuses",
         pl = "Paid leave",
         up = "Unemployment protection",
         ob = "Other bonuses and benefits",
@@ -251,7 +290,7 @@ labor_server <- function(input, output, session) {
     if (group0 == "social") {
       groupE <- safe_value(selected_groupE(), "pensions")
       if (groupE == "pensions") {
-        return("Pension contribution as share of wages (%)")
+        return("Pensions contribution as share of wages (%)")
       }
       if (groupE == "health") {
         return("Health contribution as share of wages (%)")
@@ -293,6 +332,7 @@ labor_server <- function(input, output, session) {
     wage_clause <- paste0("by wage level", tenure_suffix, location_suffix)
     
     us_clause <- "US denotes the simple average across the states of New York, California, Texas, and Florida."
+    missing_health_clause <- "Data are not available for the United States, Brazil, and Spain."
     shared_costs_clause <- paste(
       "These costs are shared between employers and employees and include mandatory contributions for pensions,",
       "health insurance, occupational risk coverage, payroll taxes, and legally required bonuses and benefits."
@@ -328,6 +368,9 @@ labor_server <- function(input, output, session) {
       )
       if (is_cross_country) {
         note_sentences <- c(note_sentences, us_clause)
+      }
+      if (is_cross_country && groupE == "health") {
+        note_sentences <- c(note_sentences, missing_health_clause)
       }
     } else if (group0 == "bonuses_and_benefits") {
       if (groupA == "component" && groupD %in% c("ab", "pl", "up", "ob")) {
@@ -629,19 +672,21 @@ labor_server <- function(input, output, session) {
   }
   if (!exists("get_payer_data", mode = "function")) {
     get_payer_data <- function(payer_name) {
+      df <- NULL
       if (exists("DATA_BY_PAYER", inherits = TRUE)) {
-        return(DATA_BY_PAYER[[payer_name]])
+        df <- DATA_BY_PAYER[[payer_name]]
+      } else {
+        payer_paths <- list(
+          pensions = "data/non_salary/pensions_payer.rds",
+          health = "data/non_salary/health_payer.rds",
+          payroll_taxes = "data/non_salary/payroll_taxes_payer.rds"
+        )
+        path <- payer_paths[[payer_name]]
+        if (!is.null(path)) {
+          df <- tryCatch(readRDS(path), error = function(e) NULL)
+        }
       }
-      payer_paths <- list(
-        pensions = "data/non_salary/pensions_payer.rds",
-        health = "data/non_salary/health_payer.rds",
-        payroll_taxes = "data/non_salary/payroll_taxes_payer.rds"
-      )
-      path <- payer_paths[[payer_name]]
-      if (is.null(path)) {
-        return(NULL)
-      }
-      tryCatch(readRDS(path), error = function(e) NULL)
+      exclude_health_countries(df)
     }
   }
   
@@ -742,6 +787,14 @@ labor_server <- function(input, output, session) {
   observeEvent(input$social,  { 
     selected_group0("social")
     selected_groupC("social")
+    selected_groupE("pensions")
+    option1_selected(TRUE)
+  })
+  observeEvent(input$occupational_risk_main, {
+    selected_group0("social")
+    selected_groupC("social")
+    selected_groupE("occupational_risk")
+    selected_groupA("total")
     option1_selected(TRUE)
   })
   observeEvent(input$payroll, {
@@ -1230,7 +1283,7 @@ labor_server <- function(input, output, session) {
         ) %>%
         mutate(
           Scenario = ifelse(grepl("_min$", type_by_component), "Min", "Max"),
-          Type = ifelse(grepl("_pension", type_by_component), "Pension",
+          Type = ifelse(grepl("_pension", type_by_component), "Pensions",
                         ifelse(grepl("_health", type_by_component), "Health",
                                ifelse(grepl("_bonuses", type_by_component), "Bonuses and Benefits",
                                       ifelse(grepl("_occupational", type_by_component), "Occupational Risk",
@@ -2027,7 +2080,7 @@ labor_server <- function(input, output, session) {
           select(country, type_by_component, value) %>%
           mutate(
             group = ifelse(grepl("_min$", type_by_component), "Min", "Max"),
-            payer = ifelse(grepl("_pension", type_by_component), "Pension", 
+            payer = ifelse(grepl("_pension", type_by_component), "Pensions", 
                            ifelse(grepl("_health", type_by_component), "Health",
                                   ifelse(grepl("_bonuses", type_by_component), "Bonuses and Benefits",
                                          ifelse(grepl("_occupational", type_by_component), "Occupational Risk","Payroll Taxes")))),
@@ -2118,7 +2171,7 @@ labor_server <- function(input, output, session) {
           select(country, type_by_component, value) %>%
           mutate(
             group = ifelse(grepl("_min$", type_by_component), "Min", "Max"),
-            payer = ifelse(grepl("^st_p", type_by_component), "Pension", 
+            payer = ifelse(grepl("^st_p", type_by_component), "Pensions", 
                            ifelse(grepl("^st_h", type_by_component), "Health",
                                   ifelse(grepl("^st_b", type_by_component), "Bonuses and Benefits",
                                          ifelse(grepl("^st_or", type_by_component), "Occupational Risk","Payroll Taxes")))),
@@ -2213,7 +2266,7 @@ labor_server <- function(input, output, session) {
         select(country, type_by_component, value) %>%
         mutate(
           group = ifelse(grepl("_min$", type_by_component), "Min", "Max"),
-          payer = ifelse(grepl("^st_p", type_by_component), "Pension", 
+          payer = ifelse(grepl("^st_p", type_by_component), "Pensions", 
                          ifelse(grepl("^st_h", type_by_component), "Health",
                                 ifelse(grepl("^st_b", type_by_component), "Bonuses and Benefits",
                                        ifelse(grepl("^st_or", type_by_component), "Occupational Risk","Payroll Taxes")))),
@@ -3408,8 +3461,8 @@ labor_server <- function(input, output, session) {
   output$component_buttons <- renderUI({
     group0 <- selected_group0()
     
-    if (group0 != "social") {
-      return(div(style="visibility:hidden;"))
+    if (group0 != "social" || identical(selected_groupE(), "occupational_risk")) {
+      return(NULL)
     }
     button_class <- function(value) {
       if (identical(selected_groupE(), value)) {
@@ -3420,35 +3473,32 @@ labor_server <- function(input, output, session) {
     }
     
     div(
-      class = "horizontal-container",
-      style = "display:flex; align-items:flex-start; justify-content:space-between; width:100%;",
-      
+      style = "margin-top: 6px;",
       div(
+        class = "horizontal-container",
+        style = "display:flex; align-items:flex-start; justify-content:flex-start; gap:20px; width:100%;",
+        
+        div(
         tags$div(
-          "Social Security Contributions Components",
+          HTML("Social Security<br>Contributions<br>Components"),
           style = "font-weight: bold; color: #b0b0b0; font-size: 14px; margin-bottom: 5px;"
         )
-      ),
-      
-      div(
-        class = "component-buttons-container",
-        style = "display:flex; flex-wrap:wrap; gap:8px;",
-        actionButton(
-          ns("pensions"),
-          "Pension",
-          class = button_class("pensions")
         ),
         
-        actionButton(
-          ns("health"),
-          "Health",
-          class = button_class("health")
-        ),
-        
-        actionButton(
-          ns("occupational_risk"),
-          "Occupational Risk",
-          class = button_class("occupational_risk")
+        div(
+          class = "component-buttons-container",
+          style = "display:flex; flex-wrap:wrap; gap:8px;",
+          actionButton(
+            ns("pensions"),
+            "Pensions",
+            class = button_class("pensions")
+          ),
+          
+          actionButton(
+            ns("health"),
+            "Health",
+            class = button_class("health")
+          )
         )
       )
     )
@@ -3475,10 +3525,10 @@ labor_server <- function(input, output, session) {
         style = "display:flex; align-items:flex-start; justify-content:space-between; width:100%;",
         
         div(
-          tags$div(
-            "Bonuses and Benefits Components",
-            style = "font-weight: bold; color: #b0b0b0; font-size: 14px; margin-bottom: 5px;"
-          )
+        tags$div(
+          HTML("Bonuses<br>and<br>Benefits<br>Components"),
+          style = "font-weight: bold; color: #b0b0b0; font-size: 14px; margin-bottom: 5px;"
+        )
         ),
         
         div(
@@ -3491,11 +3541,11 @@ labor_server <- function(input, output, session) {
             class = bonus_class("all_bonuses")
           ),
           
-          actionButton(
-            ns("ab"),
-            "Annual and other bonuses",
-            class = bonus_class("ab")
-          ),
+                        actionButton(
+                          ns("ab"),
+                          "Annual and other periodic bonuses",
+                          class = bonus_class("ab")
+                        ),
           
           actionButton(
             ns("pl"),
