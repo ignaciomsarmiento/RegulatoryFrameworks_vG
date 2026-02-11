@@ -3809,7 +3809,8 @@ labor_server <- function(input, output, session) {
   )
   
   output$download_table_ui <- renderUI({
-    if (!table_visible()) {
+    df_table <- ns_variables$df_final_tabla
+    if (!is.data.frame(df_table) || ncol(df_table) == 0) {
       return(NULL)
     }
     downloadButton(
@@ -3821,11 +3822,11 @@ labor_server <- function(input, output, session) {
   
   output$download_table <- downloadHandler(
     filename = function() {
-      paste0("Regulatory_Frameworks_Legislation_", Sys.Date(), ".csv")
+      paste0("Regulatory_Frameworks_Legislation_", Sys.Date(), ".xlsx")
     },
     content = function(file) {
-      write.csv(ns_variables$df_final_tabla, file, row.names = FALSE)
+      openxlsx::write.xlsx(ns_variables$df_final_tabla, file, overwrite = TRUE)
     },
-    contentType = "text/csv"
+    contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   )
 }

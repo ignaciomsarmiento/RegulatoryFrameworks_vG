@@ -255,6 +255,56 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     hetero_cache
   }
 
+  html_decode_entities <- function(text) {
+    text <- gsub("&nbsp;", " ", text, fixed = TRUE)
+    text <- gsub("&quot;", "\"", text, fixed = TRUE)
+    text <- gsub("&apos;", "'", text, fixed = TRUE)
+    text <- gsub("&#39;", "'", text, fixed = TRUE)
+    text <- gsub("&amp;", "&", text, fixed = TRUE)
+    text <- gsub("&lt;", "<", text, fixed = TRUE)
+    text <- gsub("&gt;", ">", text, fixed = TRUE)
+    text
+  }
+
+  html_table_to_df <- function(table_html) {
+    if (is.null(table_html) || !nzchar(table_html)) {
+      return(NULL)
+    }
+    html <- gsub("(?i)<br\\s*/?>", "\n", table_html, perl = TRUE)
+    rows <- regmatches(html, gregexpr("(?is)<tr[^>]*>.*?</tr>", html, perl = TRUE))[[1]]
+    if (length(rows) == 0) {
+      return(NULL)
+    }
+    row_cells <- lapply(rows, function(row) {
+      cells <- regmatches(row, gregexpr("(?is)<t[dh][^>]*>.*?</t[dh]>", row, perl = TRUE))[[1]]
+      if (length(cells) == 0) return(character(0))
+      cells <- gsub("(?is)^<t[dh][^>]*>|</t[dh]>$", "", cells, perl = TRUE)
+      cells <- gsub("(?is)<[^>]+>", "", cells, perl = TRUE)
+      cells <- html_decode_entities(cells)
+      cells <- gsub("[ \t\\r\\f\\v]+", " ", cells)
+      cells <- gsub("\\n{2,}", "\n", cells)
+      trimws(cells)
+    })
+    max_cols <- max(lengths(row_cells))
+    if (!is.finite(max_cols) || max_cols == 0) {
+      return(NULL)
+    }
+    row_cells <- lapply(row_cells, function(cells) {
+      length(cells) <- max_cols
+      cells[is.na(cells)] <- ""
+      cells
+    })
+    headers <- row_cells[[1]]
+    data_rows <- row_cells[-1]
+    df <- as.data.frame(do.call(rbind, data_rows), stringsAsFactors = FALSE)
+    if (length(headers) == ncol(df)) {
+      names(df) <- headers
+    } else {
+      names(df) <- paste0("V", seq_len(ncol(df)))
+    }
+    df
+  }
+
   regulation_cache <- NULL
   get_regulation_sections <- function() {
     if (!is.null(regulation_cache)) {
@@ -4283,6 +4333,8 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         )
       }
 
+      table_visible(TRUE)
+      ns_variables$df_final_tabla <- html_table_to_df(hetero_section$table_html)
       return(tagList(
         tags$style(HTML("
           .excel-table table {
@@ -5091,7 +5143,8 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
   )
 
   output$download_table_ui <- renderUI({
-    if (!table_visible()) {
+    df_table <- ns_variables$df_final_tabla
+    if (!is.data.frame(df_table) || ncol(df_table) == 0) {
       return(NULL)
     }
     downloadButton(
@@ -5103,12 +5156,12 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
   
   output$download_table <- downloadHandler(
     filename = function() {
-      paste0("Regulatory_Frameworks_Legislation_", Sys.Date(), ".csv")
+      paste0("Regulatory_Frameworks_Legislation_", Sys.Date(), ".xlsx")
     },
     content = function(file) {
-      write.csv(ns_variables$df_final_tabla, file, row.names = FALSE)
+      openxlsx::write.xlsx(ns_variables$df_final_tabla, file, overwrite = TRUE)
     },
-    contentType = "text/csv"
+    contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   )
 }
 
