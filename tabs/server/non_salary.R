@@ -1775,12 +1775,11 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
           data = sub,
           name = type,
           marker = list(color = bonus_palette[[type]]),
-          customdata = ~hover_text,
-          hovertemplate = "%{x}<br>%{y:.2f}<br>%{customdata}<extra>%{fullData.name}</extra>",
+          hovertemplate = "%{y:.2f}<extra></extra>",
           showlegend = show_legend,
           legendgroup = type,
           legendrank = match(type, legend_order),
-          hoverinfo = "y+name"
+          hoverinfo = "y"
         )
       }
       fig %>%
