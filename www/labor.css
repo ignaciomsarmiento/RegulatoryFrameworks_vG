@@ -111,7 +111,7 @@
 .labor-choice-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   flex: 1;
 }
 
@@ -193,11 +193,41 @@
     align-items: flex-start;
     flex-wrap: wrap;
     gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .labor-choice-title {
+    white-space: normal;
   }
 
   .labor-choice-desc {
     flex-basis: 100%;
-    margin-left: 26px;
+    margin-left: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 600px) {
+  .labor-explore-label {
+    font-size: 11px;
+    padding-top: 0;
+  }
+
+  .labor-choice-row {
+    padding: 10px 12px !important;
+    gap: 10px;
+  }
+
+  .labor-choice-title {
+    font-size: 12px;
+  }
+
+  .labor-choice-desc {
+    font-size: 12px;
+    line-height: 1.2;
   }
 }
 
