@@ -113,7 +113,9 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     country_sel = "All",
     countries = initial_countries,
     df_final = NULL,
-    df_final_tabla = NULL
+    df_final_tabla = NULL,
+    missing_payroll_countries = NULL,
+    missing_occ_risk_countries = NULL
   )
 
   if (is.function(data_sources)) {
@@ -203,6 +205,94 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       df <- df %>% dplyr::filter(!country %in% c("US", "BRA", "ESP"))
     }
     df
+  }
+
+  normalize_hetero_key <- function(text) {
+    if (is.null(text) || length(text) == 0) return("")
+    tolower(gsub("\\s+", " ", trimws(text)))
+  }
+
+  hetero_cache <- NULL
+  get_heterogeneity_sections <- function() {
+    if (!is.null(hetero_cache)) {
+      return(hetero_cache)
+    }
+    html_path <- "data/non_salary/tables_html/tables_heterogeneity.html"
+    if (!file.exists(html_path)) {
+      hetero_cache <<- list(sections = list(), countries = character(0))
+      return(hetero_cache)
+    }
+    html_raw <- paste(readLines(html_path, warn = FALSE), collapse = "\n")
+    sections_raw <- strsplit(html_raw, "<!-- \\*+ -->")[[1]]
+
+    parse_section <- function(s) {
+      name_match <- regmatches(s, regexpr("<em>[^<]+</em>", s))
+      if (length(name_match) == 0) return(NULL)
+      sheet_name <- gsub("</?em>", "", name_match)
+
+      table_match <- regmatches(s, regexpr("<table[\\s\\S]*?</table>", s, perl = TRUE))
+      if (length(table_match) == 0) return(NULL)
+
+      parts <- strsplit(sheet_name, " - ")[[1]]
+      if (length(parts) != 2) return(NULL)
+      country <- trimws(parts[2])
+      cat_raw <- trimws(parts[1])
+      category <- gsub("^TL Het\\.?\\s*", "", cat_raw)
+      category <- trimws(category)
+
+      list(
+        sheet_name = sheet_name,
+        country = country,
+        category = category,
+        category_key = normalize_hetero_key(category),
+        table_html = table_match[1]
+      )
+    }
+
+    sections <- Filter(Negate(is.null), lapply(sections_raw, parse_section))
+    countries <- sort(unique(vapply(sections, `[[`, character(1), "country")))
+    hetero_cache <<- list(sections = sections, countries = countries)
+    hetero_cache
+  }
+
+  hetero_category_for_selection <- function(group0, groupE) {
+    if (group0 == "all") return("All")
+    if (group0 == "bonuses_and_benefits") return("Bonuses")
+    if (group0 == "payroll_taxes") return("Payroll Taxes")
+    if (group0 == "social") {
+      return(switch(
+        groupE,
+        pensions = "Pension",
+        health = "Health",
+        occupational_risk = "Oc Risk",
+        NULL
+      ))
+    }
+    NULL
+  }
+
+  find_missing_countries <- function(df, candidates = NULL) {
+    if (!is.null(candidates)) {
+      candidates <- unique(candidates)
+      candidates <- candidates[!is.na(candidates) & candidates != "All"]
+    }
+    if (is.null(df) || nrow(df) == 0 || !"country" %in% names(df) || !"value" %in% names(df)) {
+      return(if (is.null(candidates)) character(0) else candidates)
+    }
+    summary <- df %>%
+      group_by(country) %>%
+      summarize(
+        max_val = suppressWarnings(max(value, na.rm = TRUE)),
+        .groups = "drop"
+      )
+    if (is.null(candidates) || length(candidates) == 0) {
+      candidates <- summary$country
+    }
+    missing <- summary %>%
+      filter(!is.finite(max_val) | max_val <= 0) %>%
+      pull(country)
+    missing <- union(missing, setdiff(candidates, summary$country))
+    missing
   }
 
   get_group_data <- function(group_name) {
@@ -347,6 +437,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     shared_short_clause <- "These costs are shared between employers and employees."
     paid_exclusively_employers <- "This component is paid exclusively by employers."
     paid_exclusively_employer <- "This component is paid exclusively by employer."
+    missing_payroll_clause <- NULL
     non_quantifiable_clause <- paste(
       "Non-quantifiable non-wage benefits include profit sharing bonuses (Chile, Dominican Republic, Ecuador,",
       "Mexico, Peru, Bolivia), family allowances/subsidies (Bolivia, Colombia), transport subsidies (Brazil),",
@@ -446,6 +537,14 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       if (is_cross_country && groupE == "health") {
         note_sentences <- c(note_sentences, missing_health_clause)
       }
+      if (is_cross_country && groupE == "occupational_risk") {
+        missing_occ_risk <- ns_variables$missing_occ_risk_countries
+        if (!is.null(missing_occ_risk) && length(missing_occ_risk) > 0) {
+          missing_names <- vapply(missing_occ_risk, country_display_name, character(1))
+          missing_list <- paste(missing_names, collapse = ", ")
+          note_sentences <- c(note_sentences, paste0("Data are not available for ", missing_list, "."))
+        }
+      }
     } else if (group0 == "payroll_taxes") {
       note_sentences <- c(
         paste0(
@@ -457,6 +556,15 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       )
       if (is_cross_country) {
         note_sentences <- c(note_sentences, us_clause)
+      }
+      missing_payroll_countries <- ns_variables$missing_payroll_countries
+      if (!is.null(missing_payroll_countries) && length(missing_payroll_countries) > 0) {
+        missing_names <- vapply(missing_payroll_countries, country_display_name, character(1))
+        missing_list <- paste(missing_names, collapse = ", ")
+        missing_payroll_clause <- paste0("Data are not available for ", missing_list, ".")
+      }
+      if (is_cross_country && groupA %in% c("total", "payer") && !is.null(missing_payroll_clause)) {
+        note_sentences <- c(note_sentences, missing_payroll_clause)
       }
     } else {
       note_sentences <- c(
@@ -901,6 +1009,9 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     groupC <- safe_value(selected_groupC(), "all_component")
     groupD <- safe_value(selected_groupD(), "all_bonuses")
     groupE <- safe_value(selected_groupE(), "pensions")
+    is_cross_country <- identical(input$compare_mode, "country")
+    ns_variables$missing_payroll_countries <- NULL
+    ns_variables$missing_occ_risk_countries <- NULL
 
     sources <- resolve_sources()
     df_non_salary <- sources$non_salary
@@ -976,6 +1087,30 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         return(df)
       }
       df$country <- df$wage
+      df
+    }
+
+    filter_missing_payroll <- function(df, candidates = NULL) {
+      if (!is_cross_country || group0 != "payroll_taxes") {
+        return(df)
+      }
+      missing <- find_missing_countries(df, candidates)
+      ns_variables$missing_payroll_countries <- missing
+      if (length(missing) > 0) {
+        df <- df %>% filter(!country %in% missing)
+      }
+      df
+    }
+
+    filter_missing_occ_risk <- function(df, candidates = NULL) {
+      if (!is_cross_country || group0 != "social" || groupE != "occupational_risk") {
+        return(df)
+      }
+      missing <- find_missing_countries(df, candidates)
+      ns_variables$missing_occ_risk_countries <- missing
+      if (length(missing) > 0) {
+        df <- df %>% filter(!country %in% missing)
+      }
       df
     }
 
@@ -1148,6 +1283,38 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       fig %>% layout(annotations = c(existing_annotations, title_annotations))
     }
 
+    build_exclusion_notice <- function(message) {
+      annotations <- list(
+        list(
+          text = message,
+          xref = "paper",
+          yref = "paper",
+          x = 0.5,
+          y = 0.5,
+          xanchor = "center",
+          yanchor = "middle",
+          align = "center",
+          showarrow = FALSE,
+          font = list(family = plotly_font_family, size = 18, color = "#0f3b66")
+        )
+      )
+      plot_ly(
+        type = "scatter",
+        mode = "markers",
+        x = numeric(0),
+        y = numeric(0),
+        showlegend = FALSE
+      ) %>%
+        layout(
+          paper_bgcolor = "rgba(0,0,0,0)",
+          plot_bgcolor  = "rgba(0,0,0,0)",
+          xaxis = list(visible = FALSE, showgrid = FALSE, zeroline = FALSE, showline = FALSE),
+          yaxis = list(visible = FALSE, showgrid = FALSE, zeroline = FALSE, showline = FALSE),
+          annotations = annotations,
+          margin = list(l = 40, r = 20, t = 40, b = 40)
+        )
+    }
+
     if (tenure_enabled()) {
       if (length(ns_variables$country_sel) != 1 || "All" %in% ns_variables$country_sel) {
         showNotification("Please select one country.", type = "error")
@@ -1156,6 +1323,14 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
 
       country_sel <- ns_variables$country_sel
       country_label <- country_display_name(country_sel)
+      excluded_countries <- c("BRA", "CHL", "COL", "PER")
+      if (country_sel %in% excluded_countries) {
+        message <- paste0(
+          country_label,
+          " is excluded since its statutory non-salary labor costs do not vary with years of employee tenure."
+        )
+        return(build_exclusion_notice(message))
+      }
 
       if (groupA == "total") {
         df_src <- NULL
@@ -2154,6 +2329,20 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       } else {
         ns_variables$countries <- c("All", unique(df_raw$country))
       }
+      if (is_cross_country && group0 == "payroll_taxes") {
+        candidate_countries <- if (length(ns_variables$country_sel) == 0 ||
+          "All" %in% ns_variables$country_sel) {
+          sources$countries
+        } else {
+          ns_variables$country_sel
+        }
+        df_missing_src <- df_raw %>% filter(wage %in% wage_filter)
+        df_missing_src <- filter_missing_payroll(df_missing_src, candidate_countries)
+        missing <- ns_variables$missing_payroll_countries
+        if (length(missing) > 0) {
+          df_raw <- df_raw %>% filter(!country %in% missing)
+        }
+      }
 
       df_long <- prepare_payer_data(
         df_raw,
@@ -3061,7 +3250,10 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
           mutate(
             type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
           )
-        ns_variables$countries=c("All",unique(df$country))
+        all_countries <- unique(df$country)
+        df <- filter_missing_payroll(df, sources$countries)
+        df <- filter_missing_occ_risk(df, sources$countries)
+        ns_variables$countries=c("All", all_countries)
       
     
         
@@ -3174,6 +3366,9 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
           mutate(
             type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
           )
+        df <- filter_missing_payroll(df, ns_variables$country_sel)
+        df <- filter_missing_occ_risk(df, ns_variables$country_sel)
+        df <- filter_missing_occ_risk(df, ns_variables$country_sel)
       
         
         if (nrow(df) == 0) {
@@ -3290,6 +3485,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
           mutate(
             type = ifelse(grepl("_min$", min_max_total), "Min", "Max")
           )
+        df <- filter_missing_payroll(df, ns_variables$country_sel)
           
         
         if (nrow(df) == 0) {
@@ -3979,15 +4175,129 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
   # ============================================================================
   
   output$tabla_detalle <- renderUI({
+    
     table_visible(FALSE)
     ns_variables$df_final_tabla <- NULL
-
+    
+    group0 <- safe_value(selected_group0(), "all")
     groupA <- safe_value(selected_groupA(), "total")
     groupC <- safe_value(selected_groupC(), "all_component")
     groupD <- safe_value(selected_groupD(), "all_bonuses")
     groupE <- safe_value(selected_groupE(), "pensions")
+
+    if (tenure_enabled()) {
+      country_sel <- ns_variables$country_sel
+      excluded_countries <- c("BRA", "CHL", "COL", "PER")
+      if (!is.null(country_sel) &&
+          length(country_sel) == 1 &&
+          country_sel %in% excluded_countries) {
+        return(NULL)
+      }
+    }
+
+    if (identical(safe_value(input$compare_mode, "country"), "wage")) {
+      hetero_meta <- get_heterogeneity_sections()
+      country_sel <- ns_variables$country_sel
+      if (is.null(country_sel) || length(country_sel) == 0 || "All" %in% country_sel) {
+        return(NULL)
+      }
+      country_code <- country_sel[1]
+      if (!(country_code %in% hetero_meta$countries)) {
+        return(NULL)
+      }
+      category <- hetero_category_for_selection(group0, groupE)
+      if (is.null(category)) {
+        return(NULL)
+      }
+      category_key <- normalize_hetero_key(category)
+      matching <- Filter(function(s) {
+        identical(s$country, country_code) && identical(s$category_key, category_key)
+      }, hetero_meta$sections)
+
+      if (length(matching) == 0) {
+        return(NULL)
+      }
+
+      hetero_section <- matching[[1]]
+      hetero_title <- NULL
+      country_label <- country_display_name(country_code)
+      if (identical(category_key, normalize_hetero_key("all"))) {
+        hetero_title <- paste0("Detailed Regulatory Information on Heterogeneity for ", country_label)
+      } else {
+        hetero_title <- paste0(
+          "Detailed Regulatory Information on Heterogeneity of ",
+          hetero_section$category,
+          " for ",
+          country_label
+        )
+      }
+
+      return(tagList(
+        tags$style(HTML(sprintf("
+          .excel-table table {
+            border-collapse: collapse;
+            width: 80%%;
+            margin: 0 auto 20px auto;
+            font-family: 'Aptos Narrow', 'Calibri', Arial, sans-serif;
+            font-size: 12px;
+          }
+          .excel-table td, .excel-table th {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            vertical-align: middle;
+          }
+          .excel-table tr:first-child td {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            text-align: center;
+          }
+          .excel-table td.cell-empty,
+          .excel-table th.cell-empty,
+          .excel-table tr.row-empty td,
+          .excel-table tr.row-empty th {
+            border: none !important;
+            background: transparent !important;
+          }
+          .section-title {
+            background: transparent;
+            color: #0f3b66;
+            font-weight: 600;
+            margin: 8px 0 12px 0;
+            text-align: center;
+            font-size: 20px;
+            font-family: %s;
+          }
+        ", plotly_font_family))),
+        tags$script(HTML("
+          (function() {
+            var tables = document.querySelectorAll('.excel-table table');
+            tables.forEach(function(table) {
+              var rows = table.querySelectorAll('tr');
+              rows.forEach(function(row) {
+                var cells = row.querySelectorAll('td, th');
+                if (!cells.length) return;
+                var allEmpty = true;
+                cells.forEach(function(cell) {
+                  var text = (cell.textContent || '').replace(/\\u00a0/g, ' ').trim();
+                  if (text.length === 0) {
+                    cell.classList.add('cell-empty');
+                  } else {
+                    allEmpty = false;
+                  }
+                });
+                if (allEmpty) {
+                  row.classList.add('row-empty');
+                }
+              });
+            });
+          })();
+        ")),
+        div(class = "section-title", hetero_title),
+        div(class = "excel-table", HTML(hetero_section$table_html))
+      ))
+    }
     
-    con_sel=ns_variables$country_sel
+    con_sel <- ns_variables$country_sel
     if (is.null(con_sel) || length(con_sel) == 0) {
       con_sel <- "All"
     }
@@ -3995,10 +4305,9 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     if (!"All" %in% con_sel) {
       con_sel_names <- vapply(con_sel, country_display_name, character(1))
     }
+    
     title_case_simple <- function(text) {
-      if (is.null(text) || length(text) == 0 || !nzchar(text)) {
-        return(text)
-      }
+      if (is.null(text) || length(text) == 0 || !nzchar(text)) return(text)
       minor_words <- c("a", "an", "and", "as", "at", "but", "by", "for", "from",
                        "if", "in", "nor", "of", "on", "or", "per", "the", "to",
                        "vs", "via", "with")
@@ -4018,7 +4327,8 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       }
       paste(words, collapse = " ")
     }
-
+    
+    # ---- Title ----
     component_label <- NULL
     if (groupC == "bonuses_and_benefits") {
       component_label <- switch(
@@ -4036,8 +4346,10 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       component_label <- "Payroll Taxes"
     } else if (groupE == "pensions") {
       component_label <- "Pensions"
+    } else if (groupE == "occupational_risk") {
+      component_label <- "Occupational Risk Insurance"
     }
-
+    
     title_text <- NULL
     if (!is.null(component_label)) {
       title_text <- paste0("Detailed regulatory information on ", component_label)
@@ -4046,7 +4358,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       }
       title_text <- title_case_simple(title_text)
     }
-
+    
     title_ui <- NULL
     if (!is.null(title_text)) {
       title_ui <- tags$div(
@@ -4061,246 +4373,332 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         title_text
       )
     }
-    build_tl_ab_html <- function(country_filter = NULL) {
-      html_path <- "data/non_salary/tables_html/tl_ab_v3.html"
-      if (!file.exists(html_path)) {
-        return(NULL)
-      }
-      html_text <- paste(readLines(html_path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
-      extract_block <- function(pattern) {
-        match <- regexpr(pattern, html_text, perl = TRUE, ignore.case = TRUE)
-        if (match[1] == -1) {
-          return(NULL)
-        }
-        regmatches(html_text, match)
-      }
-      style_block <- extract_block("<style[^>]*>[\\s\\S]*?</style>")
-      if (!is.null(style_block)) {
-        style_block <- sub("^<style[^>]*>", "", style_block)
-        style_block <- sub("</style>$", "", style_block)
-      }
-      table_block <- extract_block("<table[^>]*>[\\s\\S]*?</table>")
-      if (is.null(table_block)) {
-        return(NULL)
-      }
-      if (!is.null(country_filter) && country_filter != "" && country_filter != "All") {
-        row_matches <- gregexpr("<tr[^>]*>[\\s\\S]*?</tr>", table_block, perl = TRUE, ignore.case = TRUE)
-        row_blocks <- regmatches(table_block, row_matches)[[1]]
-        if (length(row_blocks) > 1) {
-          header_row <- row_blocks[1]
-          data_rows <- row_blocks[-1]
-          escape_regex <- function(x) {
-            gsub("([\\\\.^$|()\\[\\]{}*+?])", "\\\\\\1", x)
-          }
-          pattern <- paste0("^", escape_regex(country_filter), "$")
-          keep <- vapply(data_rows, function(row) {
-            td_match <- regexpr("<td[^>]*>[\\s\\S]*?</td>", row, perl = TRUE, ignore.case = TRUE)
-            if (td_match[1] == -1) {
-              return(FALSE)
-            }
-            td_block <- regmatches(row, td_match)
-            cell_text <- gsub("<[^>]+>", "", td_block)
-            cell_text <- trimws(cell_text)
-            grepl(pattern, cell_text, ignore.case = TRUE)
-          }, logical(1))
-          new_rows <- paste(c(header_row, data_rows[keep]), collapse = "")
-          table_block <- sub(
-            "(?is)(<table[^>]*>)[\\s\\S]*?(</table>)",
-            paste0("\\1", new_rows, "\\2"),
-            table_block,
-            perl = TRUE
-          )
-        }
-      }
-      table_block <- sub("<table", "<table id=\"bonus_tbl\"", table_block, fixed = TRUE)
-      wrap_block <- extract_block("<div[^>]*class=[\"'][^\"']*tl-table-wrap[^\"']*[\"'][^>]*>[\\s\\S]*?</div>")
-      div_block <- wrap_block
-      if (is.null(div_block)) {
-        div_block <- extract_block("<div[^>]*id=[\"']tables_[^\"']+[\"'][^>]*>[\\s\\S]*?</div>")
-      }
-      html_block <- table_block
-      if (!is.null(div_block)) {
-        div_block <- sub("<table[^>]*>[\\s\\S]*?</table>", table_block, div_block, perl = TRUE, ignore.case = TRUE)
-        html_block <- div_block
-      }
-      init_js <- paste0(
-        "$(function(){",
-        "var $tbl = $('#bonus_tbl');",
-        "if (!$tbl.length) { return; }",
-        "if ($.fn.DataTable.isDataTable($tbl)) { $tbl.DataTable().destroy(); }",
-        "var dt = $tbl.DataTable({",
-        "paging: true,",
-        "pageLength: 10,",
-        "lengthMenu: [5, 10, 25],",
-        "searching: false,",
-        "info: true,",
-        "ordering: true,",
-        "autoWidth: false,",
-        "dom: 'tip'",
-        "});",
-        "});"
-      )
-      dt_deps <- htmltools::htmlDependencies(
-        DT::datatable(data.frame(), options = list(dom = "t"), rownames = FALSE)
-      )
-      tagList(
-        title_ui,
-        if (!is.null(style_block)) tags$style(HTML(style_block)),
-        dt_deps,
-        tags$div(
-          style = "width:100%; text-align:center;",
-          HTML(html_block)
-        ),
-        tags$script(HTML(init_js))
-      )
-    }
-    if(groupA!= "component" ) return()
-    else{
-      data <- NULL
-      html_output <- NULL
-      if(groupA== "component" & groupC=="all_component"){
-        return()
-      }
-      else if (groupA== "component" & groupC=="bonuses_and_benefits" & groupD=="all_bonuses"){
-        # OPTIMIZADO: get_excel_table() en lugar de read_excel()
-        data <- get_excel_table("TL All B")
-        if (!is.null(data)) {
-          data <- as.data.frame(data)
-          if(!"All" %in% con_sel){
-            data=data %>% dplyr::filter(Country %in% con_sel_names)
-          }
-          ns_variables$df_final_tabla=data
-        }
-      }
-      else if (groupA== "component" & groupC=="bonuses_and_benefits" & groupD=="ab"){
-        # OPTIMIZADO
-        data <- get_excel_table("TL ab")
-        if (!is.null(data)) {
-          data <- as.data.frame(data)
-          if(!"All" %in% con_sel){
-            data=data %>% dplyr::filter(Country %in% con_sel_names)
-          }
-          ns_variables$df_final_tabla=data
-        }
-        country_filter <- NULL
-        if (length(con_sel_names) == 1 && con_sel_names[1] != "All") {
-          country_filter <- con_sel_names[1]
-        }
-        html_output <- build_tl_ab_html(country_filter)
-      }
-      else if (groupA== "component" & groupC=="bonuses_and_benefits" & groupD=="pl"){
-        # OPTIMIZADO
-        data <- get_excel_table("TL pl")
-        if (!is.null(data)) {
-          data <- as.data.frame(data)
-          if(!"All" %in% con_sel){
-            data=data %>% dplyr::filter(Country %in% con_sel_names)
-          }
-          ns_variables$df_final_tabla=data
-        }
-      }
-      else if (groupA== "component" & groupC=="bonuses_and_benefits" & groupD=="up"){
-        # OPTIMIZADO
-        data <- get_excel_table("TL up")
-        if (!is.null(data)) {
-          data <- as.data.frame(data)
-          if(!"All" %in% con_sel){
-            data=data %>% dplyr::filter(Country %in% con_sel_names)
-          }
-          ns_variables$df_final_tabla=data
-        }
-      }
-      else if (groupA== "component" & groupC=="bonuses_and_benefits" & groupD=="ob"){
-        # OPTIMIZADO
-        data <- get_excel_table("TL Or")
-        if (!is.null(data)) {
-          data <- as.data.frame(data)
-          if(!"All" %in% con_sel){
-            data=data %>% dplyr::filter(Country %in% con_sel_names)
-          }
-          ns_variables$df_final_tabla=data
-        }
-      }
-      else if (groupA== "component" & groupE=="health"){
-        # OPTIMIZADO
-        data <- get_excel_table("TL H")
-        if (!is.null(data)) {
-          data <- as.data.frame(data)
-          if(!"All" %in% con_sel){
-            data=data %>% dplyr::filter(Country %in% con_sel_names)
-          }
-          ns_variables$df_final_tabla=data
-        }
-      }
-      else if (groupA== "component" & groupE=="payroll_taxes"){
-        # OPTIMIZADO
-        data <- get_excel_table("TL Pt")
-        if (!is.null(data)) {
-          data <- as.data.frame(data)
-          if(!"All" %in% con_sel){
-            data=data %>% dplyr::filter(Country %in% con_sel_names)
-          }
-          ns_variables$df_final_tabla=data
-        }
-      }
-      else if (groupA== "component" & groupE=="pensions"){
-        # OPTIMIZADO
-        data <- get_excel_table("TL All P")
-        if (!is.null(data)) {
-          data <- as.data.frame(data)
-          if(!"All" %in% con_sel){
-            data=data %>% dplyr::filter(Country %in% con_sel_names)
-          }
-          ns_variables$df_final_tabla=data
-        }
-      }
     
-    if (!is.null(html_output)) {
-      table_visible(TRUE)
-      return(html_output)
+    # ---- Helper: load sheet, filter by country, store in ns_variables ----
+    load_and_filter <- function(sheet_name) {
+      data <- get_excel_table(sheet_name)
+      if (is.null(data)) return(NULL)
+      data <- as.data.frame(data)
+      if (!"All" %in% con_sel) {
+        data <- data %>% dplyr::filter(Country %in% con_sel_names)
+      }
+      ns_variables$df_final_tabla <- data
+      data
     }
-    if (is.null(data)) {
-      return(NULL)
-    }
-    table_visible(TRUE)
     
-    tagList(
-      title_ui,
-      tags$div(
-        style = "display:flex; justify-content:center; width:100%;",
-        reactable::reactable(
-          data,
-          
-          # Estilo general aplicado a todas las columnas
-          defaultColDef = reactable::colDef(
-            html = TRUE,
-            minWidth = 140,
-            maxWidth = 260,
-            align = "left",
-            style = list(
-              whiteSpace = "normal",
-              lineHeight = "1.35",
-              fontSize = "12px",
-              padding = "6px",
-              textAlign = "justify",
-              fontFamily = plotly_font_family
-            )
-          ),
-          theme = reactable::reactableTheme(
-            style = list(fontFamily = plotly_font_family),
-            headerStyle = list(fontFamily = plotly_font_family)
-          ),
-          bordered = TRUE,
-          striped = TRUE,
-          highlight = TRUE,
-          resizable = TRUE,
-          defaultPageSize = 8
-        )
-      )
+    # ---- Helper: build a select-input filter function for Country ----
+    # This creates a native <select> dropdown inside reactable's filter row
+    # using only reactable's built-in reactable::JS — no external wiring needed.
+    country_select_filter <- function(countries) {
+      opts <- sort(unique(countries))
+      opts_js <- paste0('"', opts, '"', collapse = ", ")
+      reactable::JS(sprintf(
+        'function(column, state) {
+           var opts = [%s];
+           var onChange = function(e) {
+             column.setFilter(e.target.value || undefined);
+           };
+           return React.createElement("select", {
+             value: column.filterValue || "",
+             onChange: onChange,
+             style: {
+               width: "100%%",
+               padding: "4px 6px",
+               border: "1px solid #ccc",
+               borderRadius: "4px",
+               fontSize: "12px",
+               fontFamily: "%s",
+               background: "#fff",
+               cursor: "pointer"
+             }
+           }, [
+             React.createElement("option", { value: "", key: "_all" }, "All"),
+             opts.map(function(o) {
+               return React.createElement("option", { value: o, key: o }, o);
+             })
+           ]);
+         }', opts_js, plotly_font_family
+      ))
+    }
+    
+    # Exact-match filter method for the dropdown (not substring)
+    exact_filter_method <- reactable::JS(
+      'function(rows, columnId, filterValue) {
+         if (!filterValue) return rows;
+         return rows.filter(function(row) {
+           return row.values[columnId] === filterValue;
+         });
+       }'
     )
     
-} 
+    # ---- Helper: build reactable ----
+    build_reactable <- function(data, merge_country = FALSE) {
+      
+      is_all_bonuses_table <- identical(groupA, "component") &&
+        identical(groupC, "bonuses_and_benefits") &&
+        identical(groupD, "all_bonuses")
+      
+      table_class     <- NULL
+      table_style_tag <- NULL
+      
+      # --- Default column definition ---
+      table_class <- "all-bonuses-table"
+      table_style_tag <- tags$style(HTML(paste(
+        ".all-bonuses-table .rt-th,",
+        ".all-bonuses-table .rt-th .rt-resizable-header-content {",
+        "  justify-content: center !important;",
+        "  text-align: center !important;",
+        "}",
+        ".all-bonuses-table .rt-td {",
+        "  justify-content: flex-start !important;",
+        "  text-align: left !important;",
+        "}",
+        ".all-bonuses-table .rt-td:first-child {",
+        "  justify-content: center !important;",
+        "  text-align: center !important;",
+        "  font-weight: 600 !important;",
+        "}",
+        sep = "\n"
+      )))
+      table_default_coldef <- reactable::colDef(
+        html        = TRUE,
+        minWidth    = 140,
+        #maxWidth    = 260,
+        align       = "left",
+        headerStyle = list(textAlign = "center", fontWeight = "600"),
+        style       = list(
+          whiteSpace = "normal",
+          lineHeight = "1.35",
+          fontSize   = "12px",
+          padding    = "6px",
+          textAlign  = "left",
+          fontFamily = plotly_font_family
+        )
+      )
+      first_col <- names(data)[1]
+      if (!is.null(first_col) && nzchar(first_col)) {
+        table_columns <- list()
+        table_columns[[first_col]] <- reactable::colDef(
+          align       = "center",
+          headerStyle = list(textAlign = "center", fontWeight = "600"),
+          style       = list(fontWeight = "600", textAlign = "center")
+        )
+      }
+      table_theme <- reactable::reactableTheme(
+        style       = list(fontFamily = plotly_font_family),
+        headerStyle = list(fontFamily = plotly_font_family, textAlign = "center")
+      )
     
+      
+      # ---- "All Bonuses" special styling ----
+      if (is_all_bonuses_table) {
+        table_class <- "all-bonuses-table"
+        table_style_tag <- tags$style(HTML(paste(
+          ".all-bonuses-table .rt-th,",
+          ".all-bonuses-table .rt-th .rt-resizable-header-content {",
+          "  justify-content: center !important;",
+          "  text-align: center !important;",
+          "}",
+          ".all-bonuses-table .rt-td {",
+          "  justify-content: flex-start !important;",
+          "  text-align: left !important;",
+          "}",
+          ".all-bonuses-table .rt-td:first-child {",
+          "  justify-content: center !important;",
+          "  text-align: center !important;",
+          "  font-weight: 600 !important;",
+          "}",
+          sep = "\n"
+        )))
+        table_default_coldef <- reactable::colDef(
+          html        = TRUE,
+          minWidth    = 140,
+          #maxWidth    = 260,
+          align       = "left",
+          headerStyle = list(textAlign = "center", fontWeight = "600"),
+          style       = list(
+            whiteSpace = "normal",
+            lineHeight = "1.35",
+            fontSize   = "12px",
+            padding    = "6px",
+            textAlign  = "left",
+            fontFamily = plotly_font_family
+          )
+        )
+        first_col <- names(data)[1]
+        if (!is.null(first_col) && nzchar(first_col)) {
+          table_columns <- list()
+          table_columns[[first_col]] <- reactable::colDef(
+            align       = "center",
+            headerStyle = list(textAlign = "center", fontWeight = "600"),
+            style       = list(fontWeight = "600", textAlign = "center")
+          )
+        }
+        table_theme <- reactable::reactableTheme(
+          style       = list(fontFamily = plotly_font_family),
+          headerStyle = list(fontFamily = plotly_font_family, textAlign = "center")
+        )
+      }
+      
+      # ---- Visual merge of Country column (TL Pt) ----
+      if (merge_country && "Country" %in% names(data)) {
+        if (is.null(table_columns)) table_columns <- list()
+        
+        countries <- data$Country
+        n         <- length(countries)
+        span_vec  <- integer(n)
+        i <- 1
+        while (i <= n) {
+          run <- 1L
+          while (i + run <= n && !is.na(countries[i + run]) &&
+                 countries[i + run] == countries[i]) {
+            run <- run + 1L
+          }
+          span_vec[i] <- run
+          if (run > 1) span_vec[(i + 1):(i + run - 1)] <- 0L
+          i <- i + run
+        }
+        spans_json <- jsonlite::toJSON(span_vec, auto_unbox = FALSE)
+        
+        js_style <- htmlwidgets::JS(sprintf(
+          "function(rowInfo) {
+             var spans = %s;
+             var idx   = rowInfo.index;
+             if (spans[idx] === 0) return { display: 'none' };
+             return { fontWeight: '600', textAlign: 'center', verticalAlign: 'middle' };
+           }",
+          spans_json
+        ))
+        
+        table_columns[["Country"]] <- reactable::colDef(
+          filterable    = TRUE,
+          filterInput   = country_select_filter(data$Country),
+          filterMethod  = exact_filter_method,
+          align         = "center",
+          headerStyle   = list(textAlign = "center", fontWeight = "600"),
+          style         = js_style
+        )
+        if (is.null(table_class)) table_class <- "merged-country-table"
+        
+        # ---- Standard Country column with dropdown filter ----
+      } else if ("Country" %in% names(data)) {
+        if (is.null(table_columns)) table_columns <- list()
+        table_columns[["Country"]] <- reactable::colDef(
+          filterable    = TRUE,
+          filterInput   = country_select_filter(data$Country),
+          filterMethod  = exact_filter_method,
+          sticky        = "left",
+          minWidth      = 130,
+          #maxWidth      = 160,
+          align         = "center",
+          headerStyle   = list(
+            textAlign  = "center",
+            fontWeight = "600",
+            position   = "sticky",
+            left       = "0",
+            background = "#fff",
+            zIndex     = "1"
+          ),
+          style = list(
+            fontWeight = "600",
+            textAlign  = "center",
+            position   = "sticky",
+            left       = "0",
+            background = "#fff",
+            zIndex     = "1"
+          )
+        )
+      }
+      
+      # --- Scroll CSS: applied to the wrapper div ---
+      scroll_css <- tags$style(HTML(
+        ".tbl-scroll-wrap {
+           width: 100%;
+           max-height: 520px;
+           overflow-y: auto;
+           border: 1px solid #e5e7eb;
+           border-radius: 6px;
+         }
+         .tbl-scroll-wrap .rt-thead {
+           position: sticky;
+           top: 0;
+           z-index: 2;
+           background: #fff;
+         }
+         .tbl-scroll-wrap .rt-tr-filters {
+           position: sticky;
+           top: 0;
+           z-index: 2;
+           background: #fff;
+         }"
+      ))
+      
+      tagList(
+        title_ui,
+        table_style_tag,
+        scroll_css,
+        tags$div(
+          class = "tbl-scroll-wrap",
+          style = "display:flex; justify-content:center; width:100%;",
+          reactable::reactable(
+            data,
+            width           = "100%",
+            defaultColDef   = table_default_coldef,
+            columns         = table_columns,
+            theme           = table_theme,
+            class           = table_class,
+            bordered        = TRUE,
+            striped         = TRUE,
+            highlight       = TRUE,
+            resizable       = TRUE,
+            pagination      = FALSE,
+            defaultPageSize = nrow(data)
+          )
+        )
+      )
+    }
+    
+    # =========================================================================
+    # DISPATCH
+    # =========================================================================
+    group0 <- safe_value(selected_group0(), "all")  
+    
+    show_table <- (groupA == "component") ||
+      (group0 == "social") ||
+      (group0 == "payroll_taxes")
+    
+    if (!show_table) return()
+    if (groupC == "all_component" && group0 == "all") return()
+    
+    data <- NULL
+    
+    if (groupC == "bonuses_and_benefits") {
+      if (groupD == "all_bonuses") {
+        data <- load_and_filter("TL All B")
+      } else if (groupD == "ab") {
+        data <- load_and_filter("TL ab")
+      } else if (groupD == "pl") {
+        data <- load_and_filter("TL pl")
+      } else if (groupD == "up") {
+        data <- load_and_filter("TL up")
+      } else if (groupD == "ob") {
+        data <- load_and_filter("TL ob")
+      }
+    } else if (group0 == "payroll_taxes") {
+      data <- load_and_filter("TL Pt")
+    } else if (group0 == "social" && groupE == "health") {
+      data <- load_and_filter("TL H")
+    } else if (group0 == "social" && groupE == "pensions") {
+      data <- load_and_filter("TL All P")
+    } else if (group0 == "social" && groupE == "occupational_risk") {
+      data <- load_and_filter("TL Or")
+    }
+    
+    if (is.null(data)) return(NULL)
+    table_visible(TRUE)
+    
+    needs_merge <- identical(groupE, "payroll_taxes")
+    build_reactable(data, merge_country = needs_merge)
   })
   
   output$option2_buttons <- renderUI({

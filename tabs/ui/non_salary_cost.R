@@ -286,7 +286,7 @@ labor_ui <- function(id) {
                  ),
                  div(
                    class = "table-spinner",
-                   style = "margin-top:30px;",
+                   style = "margin-top:15px;",
                    uiOutput(ns("tabla_detalle"))
                  )
                )
