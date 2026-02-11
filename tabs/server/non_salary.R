@@ -751,7 +751,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       class = "pretty-select",
       selectizeInput(
         inputId = ns("country_selection_user"),
-        label = "Country Analysis by:",
+        label = NULL,
         choices = choices,
         selected = selected_country,
         multiple = TRUE,
@@ -5010,7 +5010,6 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
 
     tags$div(
       class = "labor-country-panel",
-      tags$div(class = "labor-country-title", "Country Analysis by:"),
       tags$div(class = "labor-country-buttons", buttons)
     )
   })
