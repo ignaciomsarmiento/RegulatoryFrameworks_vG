@@ -2810,6 +2810,19 @@ labor_server <- function(input, output, session) {
     }
     if (groupA == "component" & groupC!="all_component" & length(ns_variables$country_sel)==1) {
       
+      scenario_colors <- c("Min" = "#00C1FF", "Max" = "#002244")
+      if (groupC == "bonuses_and_benefits" && groupD != "all_bonuses") {
+        bonus_color <- switch(
+          groupD,
+          ab = bonus_palette[["Annual and other periodic bonuses"]],
+          pl = bonus_palette[["Paid Leave"]],
+          up = bonus_palette[["Unemployment Protection"]],
+          ob = bonus_palette[["Other bonuses"]],
+          "#002244"
+        )
+        scenario_colors <- c("Min" = bonus_color, "Max" = bonus_color)
+      }
+
       if(ns_variables$country_sel=="All"){
         if(groupC=="bonuses_and_benefits" & groupD!="all_bonuses"){
           # OPTIMIZADO: get_component_data() en lugar de readRDS()
@@ -2909,7 +2922,7 @@ labor_server <- function(input, output, session) {
             y = ~value,
             type = "bar",
             color = ~Scenario,
-            colors = c("Min" = "#00C1FF", "Max" = "#002244"),
+            colors = scenario_colors,
             showlegend = FALSE
           ) %>%
             layout(
@@ -3052,7 +3065,7 @@ labor_server <- function(input, output, session) {
             y = ~value,
             type = "bar",
             color = ~Scenario,
-            colors = c("Min" = "#00C1FF", "Max" = "#002244"),
+            colors = scenario_colors,
             showlegend = FALSE
           ) %>%
             layout(
@@ -3103,6 +3116,18 @@ labor_server <- function(input, output, session) {
       if ("All" %in%  ns_variables$country_sel) {
         showNotification("Please select only countries.", type = "error")
         return(NULL)
+      }
+      scenario_colors <- c("Min" = "#00C1FF", "Max" = "#002244")
+      if (groupC == "bonuses_and_benefits" && groupD != "all_bonuses") {
+        bonus_color <- switch(
+          groupD,
+          ab = bonus_palette[["Annual and other periodic bonuses"]],
+          pl = bonus_palette[["Paid Leave"]],
+          up = bonus_palette[["Unemployment Protection"]],
+          ob = bonus_palette[["Other bonuses"]],
+          "#002244"
+        )
+        scenario_colors <- c("Min" = bonus_color, "Max" = bonus_color)
       }
       if(groupC=="bonuses_and_benefits" & groupD!="all_bonuses"){
         # OPTIMIZADO
@@ -3203,7 +3228,7 @@ labor_server <- function(input, output, session) {
           y = ~value,
           type = "bar",
           color = ~Scenario,
-          colors = c("Min" = "#00C1FF", "Max" = "#002244"),
+          colors = scenario_colors,
           showlegend = FALSE
         ) %>%
           layout(
