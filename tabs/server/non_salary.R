@@ -675,16 +675,21 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     annotations
   }
   
-  apply_labor_plot_theme <- function(fig) {
+  enforce_numeric_hover <- function(fig) {
     traces <- fig$x$data
-    idx <- which(vapply(traces, function(tr) is.null(tr$hovertemplate), logical(1)))
-    if (length(idx) > 0) {
-      fig <- plotly::style(
-        fig,
-        hovertemplate = "%{x}<br>%{y:.2f}<extra>%{fullData.name}</extra>",
-        traces = idx
-      )
+    if (is.null(traces) || length(traces) == 0) {
+      return(fig)
     }
+    for (i in seq_along(traces)) {
+      fig$x$data[[i]]$hovertemplate <- "%{y:.2f}%<extra></extra>"
+      fig$x$data[[i]]$hoverinfo <- "y"
+      fig$x$data[[i]]$customdata <- NULL
+    }
+    fig
+  }
+
+  apply_labor_plot_theme <- function(fig) {
+    fig <- enforce_numeric_hover(fig)
     annotations <- plot_footer_annotations()
     margin_b <- attr(annotations, "margin_b")
     if (is.null(margin_b) || is.na(margin_b)) {
