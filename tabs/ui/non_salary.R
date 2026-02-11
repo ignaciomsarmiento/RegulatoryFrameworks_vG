@@ -129,10 +129,7 @@ labor_view_selector_ui <- function(ns, active_view = NULL) {
     class = "labor-view-selector",
     labor_header_ui(
       "Non-salary Labor Costs",
-      paste(
-        "Explore non-wage labor costs employers incur beyond direct wages,",
-        "including legally required social contributions by payer",
-        "(employer vs. employee) and by benefit component."
+      paste("Explore non-salary labor costs separate from direct wages, with a breakdown of legally mandated social contributions by statutory payer (employer vs. employee) and by benefit category"
       )
     ),
     labor_choice_cards_ui(ns, active_view)
