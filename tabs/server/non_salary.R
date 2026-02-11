@@ -255,6 +255,53 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     hetero_cache
   }
 
+  regulation_cache <- NULL
+  get_regulation_sections <- function() {
+    if (!is.null(regulation_cache)) {
+      return(regulation_cache)
+    }
+    html_path <- "data/non_salary/tables_html/tables.html"
+    if (!file.exists(html_path)) {
+      regulation_cache <<- list(sections = list())
+      return(regulation_cache)
+    }
+    html_raw <- paste(readLines(html_path, warn = FALSE), collapse = "\n")
+    sections_raw <- strsplit(html_raw, "<!-- \\*+ -->")[[1]]
+
+    sheet_labels <- c(
+      "TL ab" = "Annual and Other Periodic Bonuses",
+      "TL pl" = "Paid Leave",
+      "TL up" = "Unemployment Protection",
+      "TL ob" = "Other Non-Wage Benefits",
+      "TL All B" = "All Benefits (Summary)",
+      "TL All P" = "Pension Contributions",
+      "TL H" = "Health Contributions",
+      "TL Or" = "Occupational Risk",
+      "TL Pt" = "Payroll Taxes"
+    )
+
+    parse_section <- function(s) {
+      name_match <- regmatches(s, regexpr("<em>[^<]+</em>", s))
+      if (length(name_match) == 0) return(NULL)
+      sheet_name <- gsub("</?em>", "", name_match)
+
+      table_match <- regmatches(s, regexpr("<table[\\s\\S]*?</table>", s, perl = TRUE))
+      if (length(table_match) == 0) return(NULL)
+
+      label <- if (sheet_name %in% names(sheet_labels)) sheet_labels[[sheet_name]] else sheet_name
+
+      list(
+        sheet_name = sheet_name,
+        label = label,
+        table_html = table_match[1]
+      )
+    }
+
+    sections <- Filter(Negate(is.null), lapply(sections_raw, parse_section))
+    regulation_cache <<- list(sections = sections)
+    regulation_cache
+  }
+
   hetero_category_for_selection <- function(group0, groupE) {
     if (group0 == "all") return("All")
     if (group0 == "bonuses_and_benefits") return("Bonuses")
@@ -4233,18 +4280,21 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       }
 
       return(tagList(
-        tags$style(HTML(sprintf("
+        tags$style(HTML("
           .excel-table table {
             border-collapse: collapse;
-            width: 80%%;
+            width: 80%;
             margin: 0 auto 20px auto;
-            font-family: 'Aptos Narrow', 'Calibri', Arial, sans-serif;
-            font-size: 12px;
+            font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 11px;
           }
           .excel-table td, .excel-table th {
             border: 1px solid #000;
             padding: 6px 8px;
             vertical-align: middle;
+          }
+          .excel-table tr:nth-child(even) td {
+            background-color: #fff;
           }
           .excel-table tr:first-child td {
             background-color: #f5f5f5;
@@ -4265,9 +4315,9 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
             margin: 8px 0 12px 0;
             text-align: center;
             font-size: 20px;
-            font-family: %s;
+            font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
           }
-        ", plotly_font_family))),
+        ")),
         tags$script(HTML("
           (function() {
             var tables = document.querySelectorAll('.excel-table table');
@@ -4384,6 +4434,122 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       }
       ns_variables$df_final_tabla <- data
       data
+    }
+
+    # =========================================================================
+    # CROSS-COUNTRY: HTML TABLES
+    # =========================================================================
+    if (identical(safe_value(input$compare_mode, "country"), "country")) {
+      show_table <- (groupA == "component") ||
+        (group0 == "social") ||
+        (group0 == "payroll_taxes")
+      if (!show_table) return()
+      if (groupC == "all_component" && group0 == "all") return()
+
+      sheet_name <- NULL
+      if (groupC == "bonuses_and_benefits") {
+        sheet_name <- switch(
+          groupD,
+          all_bonuses = "TL All B",
+          ab = "TL ab",
+          pl = "TL pl",
+          up = "TL up",
+          ob = "TL ob",
+          NULL
+        )
+      } else if (group0 == "payroll_taxes") {
+        sheet_name <- "TL Pt"
+      } else if (group0 == "social" && groupE == "health") {
+        sheet_name <- "TL H"
+      } else if (group0 == "social" && groupE == "pensions") {
+        sheet_name <- "TL All P"
+      } else if (group0 == "social" && groupE == "occupational_risk") {
+        sheet_name <- "TL Or"
+      }
+
+      if (is.null(sheet_name)) return(NULL)
+
+      data <- load_and_filter(sheet_name)
+      if (is.null(data)) return(NULL)
+      table_visible(TRUE)
+
+      reg_sections <- get_regulation_sections()
+      matching <- Filter(function(s) identical(s$sheet_name, sheet_name), reg_sections$sections)
+      if (length(matching) == 0) return(NULL)
+      section <- matching[[1]]
+
+      visible_countries <- character(0)
+      if (!is.null(con_sel) && length(con_sel) > 0 && !"All" %in% con_sel) {
+        visible_countries <- con_sel_names
+      }
+      visible_json <- jsonlite::toJSON(visible_countries, auto_unbox = TRUE)
+      show_all <- if (is.null(con_sel) || length(con_sel) == 0 || "All" %in% con_sel) "true" else "false"
+
+      return(tagList(
+        title_ui,
+        tags$style(HTML("
+          .excel-table table {
+            border-collapse: collapse;
+            width: 80%;
+            margin: 0 auto 12px auto;
+            font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 10px;
+            line-height: 1.25;
+          }
+          .excel-table td, .excel-table th {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            vertical-align: middle;
+            font-size: 10px !important;
+            font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif !important;
+          }
+          .excel-table td *, .excel-table th * {
+            font-size: 10px !important;
+            font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            line-height: 1.25 !important;
+          }
+          .excel-table font {
+            font-size: 10px !important;
+            font-family: 'National Park', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif !important;
+          }
+          .excel-table tr:nth-child(even) td {
+            background-color: #fff;
+          }
+          .excel-table tr:first-child td {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+          }
+          .country-hidden { display: none !important; }
+        ")),
+        tags$script(HTML(sprintf("
+          (function() {
+            var visible = %s || [];
+            var showAll = %s;
+            document.querySelectorAll('.excel-table table').forEach(function(table) {
+              var rows = table.querySelectorAll('tr');
+              var lastCountry = null;
+              rows.forEach(function(row, idx) {
+                if (idx === 0) return;
+                var firstCell = row.querySelector('td');
+                if (!firstCell) return;
+                var text = (firstCell.textContent || '').replace(/\\s+/g, ' ').trim();
+                if (text) {
+                  lastCountry = text;
+                }
+                var country = text || lastCountry;
+                if (!country) return;
+                if (showAll || visible.indexOf(country) !== -1) {
+                  row.classList.remove('country-hidden');
+                } else {
+                  row.classList.add('country-hidden');
+                }
+              });
+            });
+          })();
+        ", visible_json, show_all))),
+        div(class = "excel-table", HTML(section$table_html))
+      ))
     }
     
     # ---- Helper: build a select-input filter function for Country ----
