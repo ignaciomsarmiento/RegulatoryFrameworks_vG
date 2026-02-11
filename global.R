@@ -84,7 +84,7 @@ DATA_BY_GROUP <- list(
     error = function(e) NULL
   ),
   payroll_taxes = tryCatch(
-    readRDS("data/non_salary/payroll_taxes_all.rds"),
+    readRDS("data/non_salary/payroll_taxes_all_distinct.rds"),
     error = function(e) NULL
   ),
   pensions = tryCatch(
@@ -200,7 +200,7 @@ DATA_BY_PAYER <- list(
     error = function(e) NULL
   ),
   payroll_taxes = tryCatch(
-    readRDS("data/non_salary/payroll_taxes_payer.rds"),
+    readRDS("data/non_salary/payroll_taxes_by_payer_distinct.rds"),
     error = function(e) NULL
   )
 )

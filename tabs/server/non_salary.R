@@ -956,7 +956,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       payer_paths <- list(
         pensions = "data/non_salary/pensions_payer.rds",
         health = "data/non_salary/health_payer.rds",
-        payroll_taxes = "data/non_salary/payroll_taxes_payer.rds"
+        payroll_taxes = "data/non_salary/payroll_taxes_by_payer_distinct.rds"
       )
       path <- payer_paths[[payer_name]]
       if (is.null(path)) {
@@ -1163,6 +1163,13 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     }
     # Transform values from "1sm" → "1 MW"
     wage_filter <- format_wage_label(wage_codes)
+    set_order_country <- function(new_order) {
+      new_order <- new_order[!is.na(new_order) & new_order != ""]
+      if (length(new_order) == 0) return()
+      if (!identical(ns_variables$order_country, new_order)) {
+        ns_variables$order_country <- new_order
+      }
+    }
     panel_order <- function() {
       if (compare_wages) {
         return(wage_filter)
@@ -1177,7 +1184,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
       current
     }
     if (compare_wages) {
-      ns_variables$order_country <- wage_filter
+      set_order_country(wage_filter)
       if (length(ns_variables$country_sel) != 1 || "All" %in% ns_variables$country_sel) {
         return(NULL)
       }
@@ -2454,6 +2461,38 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         return(NULL)
       }
 
+      if (is_cross_country && group0 == "payroll_taxes") {
+        order_src <- get_group_data("payroll_taxes")
+        if (!is.null(order_src)) {
+          order_df <- order_src %>%
+            filter(wage %in% wage_filter) %>%
+            apply_wage_panels() %>%
+            select(country, min_max_total, value) %>%
+            mutate(type = ifelse(grepl("_min$", min_max_total), "Min", "Max"))
+          if (length(ns_variables$country_sel) > 0 && !"All" %in% ns_variables$country_sel) {
+            order_df <- order_df %>% filter(country %in% ns_variables$country_sel)
+          }
+          candidate_countries <- if (length(ns_variables$country_sel) == 0 ||
+            "All" %in% ns_variables$country_sel) {
+            sources$countries
+          } else {
+            ns_variables$country_sel
+          }
+          order_df <- filter_missing_payroll(order_df, candidate_countries)
+          if (nrow(order_df) > 0) {
+            order_wide <- order_df %>%
+              group_by(country) %>%
+              summarize(
+                t_min = min(value, na.rm = TRUE),
+                t_max = max(value, na.rm = TRUE),
+                .groups = "drop"
+              ) %>%
+              arrange(t_min)
+            set_order_country(unique(order_wide$country))
+          }
+        }
+      }
+
       return(plot_payer_subplots(df_long, y_axis_title))
     }
     
@@ -2484,7 +2523,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
           arrange(t_min) %>%
           mutate(country = factor(country, levels = country))
         
-        ns_variables$order_country <- unique(as.character(df_wide$country))
+        set_order_country(unique(as.character(df_wide$country)))
         
         df_mm <- df_wide %>%
           tidyr::pivot_longer(
@@ -2692,7 +2731,7 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
         arrange(t_min) %>%
         mutate(country = factor(country, levels = country))
       
-      ns_variables$order_country <- unique(as.character(df_wide$country))
+      set_order_country(unique(as.character(df_wide$country)))
       
       df_mm <- df_wide %>%
         tidyr::pivot_longer(
