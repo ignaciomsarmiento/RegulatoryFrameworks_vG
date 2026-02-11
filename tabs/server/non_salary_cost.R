@@ -225,6 +225,7 @@ labor_server <- function(input, output, session) {
   
   plot_title_text <- function() {
     group0 <- safe_value(selected_group0(), "all")
+    group0 <- safe_value(selected_group0(), "all")
     groupA <- safe_value(selected_groupA(), "total")
     groupD <- safe_value(selected_groupD(), "all_bonuses")
     groupE <- safe_value(selected_groupE(), "pensions")
@@ -3327,7 +3328,9 @@ labor_server <- function(input, output, session) {
     
     # ---- Title ----
     component_label <- NULL
-    if (groupC == "bonuses_and_benefits") {
+    if (group0 == "payroll_taxes") {
+      component_label <- "Payroll Taxes"
+    } else if (groupC == "bonuses_and_benefits") {
       component_label <- switch(
         groupD,
         all_bonuses = "All Bonuses",

@@ -4461,7 +4461,9 @@ non_salary_server_core <- function(input, output, session, data_sources = NULL, 
     
     # ---- Title ----
     component_label <- NULL
-    if (groupC == "bonuses_and_benefits") {
+    if (group0 == "payroll_taxes") {
+      component_label <- "Payroll Taxes"
+    } else if (groupC == "bonuses_and_benefits") {
       component_label <- switch(
         groupD,
         all_bonuses = "All Bonuses",
