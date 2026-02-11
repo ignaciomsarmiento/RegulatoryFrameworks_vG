@@ -103,7 +103,7 @@ labor_choice_cards_ui <- function(ns, active_view = NULL) {
           tags$span(class = "labor-choice-title", "CROSS-COUNTRY VIEW"),
           tags$span(
             class = "labor-choice-desc",
-            "Compare non-salary labor costs across countries at a selected minimum wage level"
+            "Compare non-salary labor costs across countries at a selected minimum wage level."
           )
         ),
         class = across_class
@@ -129,7 +129,7 @@ labor_view_selector_ui <- function(ns, active_view = NULL) {
     class = "labor-view-selector",
     labor_header_ui(
       "Non-salary Labor Costs",
-      paste("Explore non-salary labor costs separate from direct wages, with a breakdown of legally mandated social contributions by statutory payer (employer vs. employee) and by benefit category"
+      paste("Explore non-salary labor costs separate from direct wages, with a breakdown of legally mandated social contributions by statutory payer (employer vs. employee) and by benefit category."
       )
     ),
     labor_choice_cards_ui(ns, active_view)
@@ -275,7 +275,7 @@ non_salary_across_ui <- function(id, show_header = TRUE) {
     ),
     labor_common_filters_ui(
       ns,
-      description_text = "Use these filters to compare non-salary labor costs across countries",
+      description_text = "Use these filters to compare non-salary labor costs across countries.",
       wage_help_text = paste(
         "Hold the job constant and change only earnings:",
         "choose a multiple of the minimum wage (MW) to see how statutory costs scale with pay."

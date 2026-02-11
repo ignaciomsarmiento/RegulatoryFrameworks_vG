@@ -174,7 +174,7 @@ labor_ui <- function(id) {
                    tags$span("1. Categories:", style = "font-weight: bold; color: #b0b0b0; font-size: 14px;"),
                    tags$p(
                      style = "font-size: 13px; line-height: 1.5; margin-bottom: 15px;",
-                     "Use these filters to compare non salary labor costs across countries"
+                     "Use these filters to compare non-salary labor costs across countries."
                    ),
                    
                     # ---- SUMMARY FILTER ----
